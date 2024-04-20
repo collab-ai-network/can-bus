@@ -1,16 +1,7 @@
-use sc_cli::RunCmd;
+use crate::{chain_specs, evm_tracing_types::EthApiOptions};
 
-#[derive(Debug, clap::Parser)]
-pub struct Cli {
-	#[command(subcommand)]
-	pub subcommand: Option<Subcommand>,
-
-	#[clap(flatten)]
-	pub run: RunCmd,
-}
-
+/// Sub-commands supported by the collator.
 #[derive(Debug, clap::Subcommand)]
-#[allow(clippy::large_enum_variant)]
 pub enum Subcommand {
 	/// Key management cli utilities
 	#[command(subcommand)]
@@ -38,14 +29,58 @@ pub enum Subcommand {
 	Revert(sc_cli::RevertCmd),
 
 	/// Sub-commands concerned with benchmarking.
+	/// The pallet benchmarking moved to the `pallet` sub-command.
 	#[command(subcommand)]
-	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+	Benchmark(Box<frame_benchmarking_cli::BenchmarkCmd>),
 
-	/// Try-runtime has migrated to a standalone CLI
-	/// (<https://github.com/paritytech/try-runtime-cli>). The subcommand exists as a stub and
-	/// deprecation notice. It will be removed entirely some time after January 2024.
+	/// Try some testing command against a specified runtime state.
+	#[cfg(feature = "try-runtime")]
+	TryRuntime(try_runtime_cli::TryRuntimeCmd),
+
+	/// Errors since the binary was not build with `--features try-runtime`.
+	#[cfg(not(feature = "try-runtime"))]
 	TryRuntime,
+}
 
-	/// Db meta columns information.
-	ChainInfo(sc_cli::ChainInfoCmd),
+#[derive(Debug, Parser)]
+#[command(
+	propagate_version = true,
+	args_conflicts_with_subcommands = true,
+	subcommand_negates_reqs = true
+)]
+pub struct Cli {
+	#[command(subcommand)]
+	pub subcommand: Option<Subcommand>,
+
+	#[command(flatten)]
+	pub run: sc_cli::RunCmd,
+
+	/// Disable automatic hardware benchmarks.
+	///
+	/// By default these benchmarks are automatically ran at startup and measure
+	/// the CPU speed, the memory bandwidth and the disk speed.
+	///
+	/// The results are then printed out in the logs, and also sent as part of
+	/// telemetry, if telemetry is enabled.
+	#[arg(long)]
+	pub no_hardware_benchmarks: bool,
+
+	/// Relay chain arguments
+	#[arg(raw = true, conflicts_with = "relay-chain-rpc-url")]
+	pub relay_chain_args: Vec<String>,
+
+	#[clap(flatten)]
+	pub eth_api_options: EthApiOptions,
+
+	/// Enable Ethereum compatible JSON-RPC servers (disabled by default).
+	#[clap(name = "enable-evm-rpc", long)]
+	pub enable_evm_rpc: bool,
+
+	/// Proposer's maximum block size limit in bytes
+	#[clap(long, default_value = sc_basic_authorship::DEFAULT_BLOCK_SIZE_LIMIT.to_string())]
+	pub proposer_block_size_limit: usize,
+
+	/// Proposer's soft deadline in percents of block size
+	#[clap(long, default_value = "50")]
+	pub proposer_soft_deadline_percent: u8,
 }

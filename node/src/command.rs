@@ -12,7 +12,7 @@ use sp_keyring::Sr25519Keyring;
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Substrate Node".into()
+		"CollabAI Node".into()
 	}
 
 	fn impl_version() -> String {
@@ -20,7 +20,12 @@ impl SubstrateCli for Cli {
 	}
 
 	fn description() -> String {
-		env!("CARGO_PKG_DESCRIPTION").into()
+		"CollabAI node\n\nThe command-line arguments provided first will be \
+		passed to the parachain node, while the arguments provided after -- will be passed \
+		to the relay chain node.\n\n\
+		litentry-collator <parachain-args> -- <relay-chain-args>"
+			.into()
+			.into()
 	}
 
 	fn author() -> String {
@@ -28,7 +33,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"support.anonymous.an".into()
+		"https://github.com/collab-ai-network/can-bus/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
@@ -59,21 +64,51 @@ pub fn run() -> sc_cli::Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, import_queue, .. } =
-					service::new_partial(&config)?;
+					service::new_partial::<
+						node_template_runtime::RuntimeApi,
+						CollabAIRuntimeExecutor,
+						_,
+					>(
+						&config,
+						crate::service::build_import_queue::<
+							node_template_runtime::RuntimeApi,
+							CollabAIRuntimeExecutor,
+						>,
+					)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, .. } = service::new_partial(&config)?;
+				let PartialComponents { client, task_manager, .. } = service::new_partial::<
+					node_template_runtime::RuntimeApi,
+					CollabAIRuntimeExecutor,
+					_,
+				>(
+					&config,
+					crate::service::build_import_queue::<
+						node_template_runtime::RuntimeApi,
+						CollabAIRuntimeExecutor,
+					>,
+				)?;
 				Ok((cmd.run(client, config.database), task_manager))
 			})
 		},
 		Some(Subcommand::ExportState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, .. } = service::new_partial(&config)?;
+				let PartialComponents { client, task_manager, .. } = service::new_partial::<
+					node_template_runtime::RuntimeApi,
+					CollabAIRuntimeExecutor,
+					_,
+				>(
+					&config,
+					crate::service::build_import_queue::<
+						node_template_runtime::RuntimeApi,
+						CollabAIRuntimeExecutor,
+					>,
+				)?;
 				Ok((cmd.run(client, config.chain_spec), task_manager))
 			})
 		},
@@ -81,7 +116,17 @@ pub fn run() -> sc_cli::Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, import_queue, .. } =
-					service::new_partial(&config)?;
+					service::new_partial::<
+						node_template_runtime::RuntimeApi,
+						CollabAIRuntimeExecutor,
+						_,
+					>(
+						&config,
+						crate::service::build_import_queue::<
+							node_template_runtime::RuntimeApi,
+							CollabAIRuntimeExecutor,
+						>,
+					)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		},
@@ -92,8 +137,17 @@ pub fn run() -> sc_cli::Result<()> {
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, backend, .. } =
-					service::new_partial(&config)?;
+				let PartialComponents { client, task_manager, backend, .. } = service::new_partial::<
+					node_template_runtime::RuntimeApi,
+					CollabAIRuntimeExecutor,
+					_,
+				>(
+					&config,
+					crate::service::build_import_queue::<
+						node_template_runtime::RuntimeApi,
+						CollabAIRuntimeExecutor,
+					>,
+				)?;
 				let aux_revert = Box::new(|client, _, blocks| {
 					sc_consensus_grandpa::revert(client, blocks)?;
 					Ok(())
@@ -120,7 +174,17 @@ pub fn run() -> sc_cli::Result<()> {
 						cmd.run::<sp_runtime::traits::HashingFor<Block>, ()>(config)
 					},
 					BenchmarkCmd::Block(cmd) => {
-						let PartialComponents { client, .. } = service::new_partial(&config)?;
+						let PartialComponents { client, .. } = service::new_partial::<
+							node_template_runtime::RuntimeApi,
+							CollabAIRuntimeExecutor,
+							_,
+						>(
+							&config,
+							crate::service::build_import_queue::<
+								node_template_runtime::RuntimeApi,
+								CollabAIRuntimeExecutor,
+							>,
+						)?;
 						cmd.run(client)
 					},
 					#[cfg(not(feature = "runtime-benchmarks"))]
@@ -130,15 +194,34 @@ pub fn run() -> sc_cli::Result<()> {
 					),
 					#[cfg(feature = "runtime-benchmarks")]
 					BenchmarkCmd::Storage(cmd) => {
-						let PartialComponents { client, backend, .. } =
-							service::new_partial(&config)?;
+						let PartialComponents { client, backend, .. } = service::new_partial::<
+							node_template_runtime::RuntimeApi,
+							CollabAIRuntimeExecutor,
+							_,
+						>(
+							&config,
+							crate::service::build_import_queue::<
+								node_template_runtime::RuntimeApi,
+								CollabAIRuntimeExecutor,
+							>,
+						)?;
 						let db = backend.expose_db();
 						let storage = backend.expose_storage();
 
 						cmd.run(config, client, db, storage)
 					},
 					BenchmarkCmd::Overhead(cmd) => {
-						let PartialComponents { client, .. } = service::new_partial(&config)?;
+						let PartialComponents { client, .. } = service::new_partial::<
+							node_template_runtime::RuntimeApi,
+							CollabAIRuntimeExecutor,
+							_,
+						>(
+							&config,
+							crate::service::build_import_queue::<
+								node_template_runtime::RuntimeApi,
+								CollabAIRuntimeExecutor,
+							>,
+						)?;
 						let ext_builder = RemarkBuilder::new(client.clone());
 
 						cmd.run(
@@ -150,7 +233,17 @@ pub fn run() -> sc_cli::Result<()> {
 						)
 					},
 					BenchmarkCmd::Extrinsic(cmd) => {
-						let PartialComponents { client, .. } = service::new_partial(&config)?;
+						let PartialComponents { client, .. } = service::new_partial::<
+							node_template_runtime::RuntimeApi,
+							CollabAIRuntimeExecutor,
+							_,
+						>(
+							&config,
+							crate::service::build_import_queue::<
+								node_template_runtime::RuntimeApi,
+								CollabAIRuntimeExecutor,
+							>,
+						)?;
 						// Register the *Remark* and *TKA* builders.
 						let ext_factory = ExtrinsicFactory(vec![
 							Box::new(RemarkBuilder::new(client.clone())),
@@ -180,8 +273,19 @@ pub fn run() -> sc_cli::Result<()> {
 		},
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
+
+			let evm_tracing_config = crate::evm_tracing_types::EvmTracingConfig {
+				ethapi: cli.eth_api_options.ethapi,
+				ethapi_max_permits: cli.eth_api_options.ethapi_max_permits,
+				ethapi_trace_max_count: cli.eth_api_options.ethapi_trace_max_count,
+				ethapi_trace_cache_duration: cli.eth_api_options.ethapi_trace_cache_duration,
+				eth_log_block_cache: cli.eth_api_options.eth_log_block_cache,
+				eth_statuses_cache: cli.eth_api_options.eth_statuses_cache,
+				max_past_logs: cli.eth_api_options.max_past_logs,
+				tracing_raw_max_memory_usage: cli.eth_api_options.tracing_raw_max_memory_usage,
+			};
 			runner.run_node_until_exit(|config| async move {
-				service::new_full(config).map_err(sc_cli::Error::Service)
+				service::new_full(config, evm_tracing_config).map_err(sc_cli::Error::Service)
 			})
 		},
 	}
