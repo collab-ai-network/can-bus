@@ -5,7 +5,7 @@ use crate::{
 	service,
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
-use node_template_runtime::{Block, EXISTENTIAL_DEPOSIT};
+use frontier_node_template_runtime::{Block, EXISTENTIAL_DEPOSIT};
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
 use sp_keyring::Sr25519Keyring;
@@ -65,13 +65,13 @@ pub fn run() -> sc_cli::Result<()> {
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, import_queue, .. } =
 					service::new_partial::<
-						node_template_runtime::RuntimeApi,
+						frontier_node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 						_,
 					>(
 						&config,
 						crate::service::build_import_queue::<
-							node_template_runtime::RuntimeApi,
+							frontier_node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 						>,
 					)?;
@@ -82,13 +82,13 @@ pub fn run() -> sc_cli::Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, .. } = service::new_partial::<
-					node_template_runtime::RuntimeApi,
+					frontier_node_template_runtime::RuntimeApi,
 					CollabAIRuntimeExecutor,
 					_,
 				>(
 					&config,
 					crate::service::build_import_queue::<
-						node_template_runtime::RuntimeApi,
+						frontier_node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 					>,
 				)?;
@@ -99,13 +99,13 @@ pub fn run() -> sc_cli::Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, .. } = service::new_partial::<
-					node_template_runtime::RuntimeApi,
+					frontier_node_template_runtime::RuntimeApi,
 					CollabAIRuntimeExecutor,
 					_,
 				>(
 					&config,
 					crate::service::build_import_queue::<
-						node_template_runtime::RuntimeApi,
+						frontier_node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 					>,
 				)?;
@@ -117,13 +117,13 @@ pub fn run() -> sc_cli::Result<()> {
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, import_queue, .. } =
 					service::new_partial::<
-						node_template_runtime::RuntimeApi,
+						frontier_node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 						_,
 					>(
 						&config,
 						crate::service::build_import_queue::<
-							node_template_runtime::RuntimeApi,
+							frontier_node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 						>,
 					)?;
@@ -138,13 +138,13 @@ pub fn run() -> sc_cli::Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, backend, .. } = service::new_partial::<
-					node_template_runtime::RuntimeApi,
+					frontier_node_template_runtime::RuntimeApi,
 					CollabAIRuntimeExecutor,
 					_,
 				>(
 					&config,
 					crate::service::build_import_queue::<
-						node_template_runtime::RuntimeApi,
+						frontier_node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 					>,
 				)?;
@@ -175,13 +175,13 @@ pub fn run() -> sc_cli::Result<()> {
 					},
 					BenchmarkCmd::Block(cmd) => {
 						let PartialComponents { client, .. } = service::new_partial::<
-							node_template_runtime::RuntimeApi,
+							frontier_node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 							_,
 						>(
 							&config,
 							crate::service::build_import_queue::<
-								node_template_runtime::RuntimeApi,
+								frontier_node_template_runtime::RuntimeApi,
 								CollabAIRuntimeExecutor,
 							>,
 						)?;
@@ -195,13 +195,13 @@ pub fn run() -> sc_cli::Result<()> {
 					#[cfg(feature = "runtime-benchmarks")]
 					BenchmarkCmd::Storage(cmd) => {
 						let PartialComponents { client, backend, .. } = service::new_partial::<
-							node_template_runtime::RuntimeApi,
+							frontier_node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 							_,
 						>(
 							&config,
 							crate::service::build_import_queue::<
-								node_template_runtime::RuntimeApi,
+								frontier_node_template_runtime::RuntimeApi,
 								CollabAIRuntimeExecutor,
 							>,
 						)?;
@@ -212,13 +212,13 @@ pub fn run() -> sc_cli::Result<()> {
 					},
 					BenchmarkCmd::Overhead(cmd) => {
 						let PartialComponents { client, .. } = service::new_partial::<
-							node_template_runtime::RuntimeApi,
+							frontier_node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 							_,
 						>(
 							&config,
 							crate::service::build_import_queue::<
-								node_template_runtime::RuntimeApi,
+								frontier_node_template_runtime::RuntimeApi,
 								CollabAIRuntimeExecutor,
 							>,
 						)?;
@@ -234,13 +234,13 @@ pub fn run() -> sc_cli::Result<()> {
 					},
 					BenchmarkCmd::Extrinsic(cmd) => {
 						let PartialComponents { client, .. } = service::new_partial::<
-							node_template_runtime::RuntimeApi,
+							frontier_node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 							_,
 						>(
 							&config,
 							crate::service::build_import_queue::<
-								node_template_runtime::RuntimeApi,
+								frontier_node_template_runtime::RuntimeApi,
 								CollabAIRuntimeExecutor,
 							>,
 						)?;

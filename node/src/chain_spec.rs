@@ -1,4 +1,4 @@
-use node_template_runtime::{AccountId, RuntimeGenesisConfig, Signature, WASM_BINARY};
+use frontier_template_runtime::{AccountId, RuntimeGenesisConfig, Signature, WASM_BINARY};
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
@@ -53,6 +53,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 		],
+		// TODO:: EVM chain id
+		99997777u64,
 		true,
 	))
 	.build())
@@ -86,6 +88,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		],
+		// TODO:: EVM chain id
+		99997777,
 		true,
 	))
 	.build())
@@ -96,6 +100,7 @@ fn testnet_genesis(
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
+	chain_id: u64,
 	_enable_println: bool,
 ) -> serde_json::Value {
 	serde_json::json!({
@@ -113,5 +118,6 @@ fn testnet_genesis(
 			// Assign network admin rights.
 			"key": Some(root_key),
 		},
+		"evmChainId": { "chainId": chain_id },
 	})
 }

@@ -10,7 +10,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use scale_codec::{Decode, Encode};
+use codec::{Decode, Encode};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
@@ -24,7 +24,7 @@ use sp_runtime::{
 		IdentityLookup, NumberFor, One, PostDispatchInfoOf, UniqueSaturatedInto, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
-	ApplyExtrinsicResult, ConsensusEngineId, Perbill, Permill,
+	ApplyExtrinsicResult, ConsensusEngineId, MultiSignature, Perbill, Permill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 use sp_version::RuntimeVersion;
@@ -35,8 +35,8 @@ use frame_support::weights::constants::ParityDbWeight as RuntimeDbWeight;
 use frame_support::weights::constants::RocksDbWeight as RuntimeDbWeight;
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{ConstBool, ConstU32, ConstU8, FindAuthor, OnFinalize, OnTimestampSet},
-	weights::{constants::WEIGHT_REF_TIME_PER_MILLIS, IdentityFee, Weight},
+	traits::{ConstBool, ConstU32, ConstU8, Currency, FindAuthor, Imbalance, OnFinalize, OnTimestampSet, OnUnbalanced},
+	weights::{constants::{WEIGHT_REF_TIME_PER_MILLIS, WEIGHT_REF_TIME_PER_SECOND}, IdentityFee, Weight},
 };
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
@@ -51,7 +51,7 @@ use pallet_ethereum::{
 	TransactionData,
 };
 use pallet_evm::{
-	Account as EVMAccount, EnsureAccountId20, FeeCalculator, IdentityAddressMapping, Runner,
+	Account as EVMAccount, EnsureAccountId20, EVMCurrencyAdapter, FeeCalculator, IdentityAddressMapping, OnChargeEVMTransaction as OnChargeEVMTransactionT, Runner,
 };
 
 // A few exports that help ease life for downstream crates.
@@ -59,6 +59,9 @@ pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::Multiplier;
+pub type NegativeImbalance<T> = <pallet_balances::Pallet<T> as Currency<
+	<T as frame_system::Config>::AccountId,
+>>::NegativeImbalance;
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -67,7 +70,7 @@ use precompiles::FrontierPrecompiles;
 pub type BlockNumber = u32;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = EthereumSignature;
+pub type Signature = MultiSignature;
 
 /// Some way of identifying an account on the chain. We intentionally make it equivalent
 /// to the public key of our transaction signing scheme.
@@ -287,9 +290,87 @@ parameter_types! {
 	pub FeeMultiplier: Multiplier = Multiplier::one();
 }
 
+// TODO:: import pallet_session, staking for replacement
+const TEST_ID: ConsensusEngineId = [1, 2, 3, 4];
+pub struct AuthorGiven;
+impl FindAuthor<u64> for AuthorGiven {
+	fn find_author<'a, I>(digests: I) -> Option<u64>
+	where
+		I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
+	{
+		for (id, mut data) in digests {
+			if id == TEST_ID {
+				return u64::decode(&mut data).ok()
+			}
+		}
+
+		None
+	}
+}
+
+impl pallet_authorship::Config for Runtime {
+	type FindAuthor = AuthorGiven;
+	type EventHandler = ();
+}
+
+// unsuccessful impl yet
+impl pallet_session::Config for Runtime {
+	type ShouldEndSession = TestShouldEndSession;
+	#[cfg(feature = "historical")]
+	type SessionManager = crate::historical::NoteHistoricalRoot<Test, TestSessionManager>;
+	#[cfg(not(feature = "historical"))]
+	type SessionManager = TestSessionManager;
+	type SessionHandler = TestSessionHandler;
+	type ValidatorId = u64;
+	type ValidatorIdOf = TestValidatorIdOf;
+	type Keys = MockSessionKeys;
+	type RuntimeEvent = RuntimeEvent;
+	type NextSessionRotation = ();
+	type WeightInfo = ();
+}
+
+// important !! The struct is used externally
+pub struct DealWithFees<R>(sp_std::marker::PhantomData<R>);
+pub const AUTHOR_PROPORTION: u32 = 0u32;
+pub const BURNED_PROPORTION: u32 = 60u32;
+
+/// Logic for the author to get a portion of fees.
+pub struct ToAuthor<R>(sp_std::marker::PhantomData<R>);
+impl<R> OnUnbalanced<NegativeImbalance<R>> for ToAuthor<R>
+where
+	R: pallet_balances::Config + pallet_authorship::Config,
+	<R as frame_system::Config>::RuntimeEvent: From<pallet_balances::Event<R>>,
+{
+	fn on_nonzero_unbalanced(amount: NegativeImbalance<R>) {
+		if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
+			<pallet_balances::Pallet<R>>::resolve_creating(&author, amount);
+		}
+	}
+}
+
+impl<R> OnUnbalanced<NegativeImbalance<R>> for DealWithFees<R>
+where
+	R: pallet_balances::Config + pallet_authorship::Config,
+	<R as frame_system::Config>::RuntimeEvent: From<pallet_balances::Event<R>>,
+{
+	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance<R>>) {
+		if let Some(fees) = fees_then_tips.next() {
+			// for fees, (1) to author and (2) burned
+			let (mut unburned, _) =
+				fees.ration(AUTHOR_PROPORTION, BURNED_PROPORTION);
+
+			if let Some(tips) = fees_then_tips.next() {
+				// for tips, if any, 100% to author
+				tips.merge_into(&mut unburned);
+			}
+			<ToAuthor<R> as OnUnbalanced<_>>::on_unbalanced(unburned);
+		}
+	}
+}
+
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees<Runtime>>;
 	type OperationalFeeMultiplier = ConstU8<5>;
 	type WeightToFee = IdentityFee<Balance>;
 	type LengthToFee = IdentityFee<Balance>;
@@ -303,6 +384,69 @@ impl pallet_sudo::Config for Runtime {
 }
 
 impl pallet_evm_chain_id::Config for Runtime {}
+
+// For OnChargeEVMTransaction implementation
+type CurrencyAccountId<T> = <T as frame_system::Config>::AccountId;
+type BalanceFor<T> =
+	<<T as pallet_evm::Config>::Currency as Currency<CurrencyAccountId<T>>>::Balance;
+type PositiveImbalanceFor<T> =
+	<<T as pallet_evm::Config>::Currency as Currency<CurrencyAccountId<T>>>::PositiveImbalance;
+type NegativeImbalanceFor<T> =
+	<<T as pallet_evm::Config>::Currency as Currency<CurrencyAccountId<T>>>::NegativeImbalance;
+pub struct OnChargeEVMTransaction<OU>(sp_std::marker::PhantomData<OU>);
+impl<T, OU> OnChargeEVMTransactionT<T> for OnChargeEVMTransaction<OU>
+where
+	T: pallet_evm::Config,
+	PositiveImbalanceFor<T>: Imbalance<BalanceFor<T>, Opposite = NegativeImbalanceFor<T>>,
+	NegativeImbalanceFor<T>: Imbalance<BalanceFor<T>, Opposite = PositiveImbalanceFor<T>>,
+	OU: OnUnbalanced<NegativeImbalanceFor<T>>,
+	U256: UniqueSaturatedInto<BalanceFor<T>>,
+{
+	type LiquidityInfo = Option<NegativeImbalanceFor<T>>;
+
+	fn withdraw_fee(who: &H160, fee: U256) -> Result<Self::LiquidityInfo, pallet_evm::Error<T>> {
+		EVMCurrencyAdapter::<<T as pallet_evm::Config>::Currency, ()>::withdraw_fee(who, fee)
+	}
+
+	fn correct_and_deposit_fee(
+		who: &H160,
+		corrected_fee: U256,
+		base_fee: U256,
+		already_withdrawn: Self::LiquidityInfo,
+	) -> Self::LiquidityInfo {
+		<EVMCurrencyAdapter<<T as pallet_evm::Config>::Currency, OU> as OnChargeEVMTransactionT<
+			T,
+		>>::correct_and_deposit_fee(who, corrected_fee, base_fee, already_withdrawn)
+	}
+	// This is the only difference of OnChargeEVMTransaction regarding EVMCurrencyAdapter
+	// We can use parachain TransactionPayment logic to handle evm tip
+	fn pay_priority_fee(tip: Self::LiquidityInfo) {
+		if let Some(tip) = tip {
+			OU::on_unbalanced(tip);
+		}
+	}
+}
+
+/// Current approximation of the gas/s consumption considering
+/// EVM execution over compiled WASM (on 4.4Ghz CPU).
+/// Given the 500ms Weight, from which 75% only are used for transactions,
+/// the total EVM execution gas limit is: GAS_PER_SECOND * 0.500 * 0.75 ~= 15_000_000.
+pub const GAS_PER_SECOND: u64 = 40_000_000;
+/// Approximate ratio of the amount of Weight per Gas.
+/// u64 works for approximations because Weight is a very small unit compared to gas.
+pub const WEIGHT_PER_GAS: u64 = WEIGHT_REF_TIME_PER_SECOND / GAS_PER_SECOND;
+
+pub struct TransactionPaymentAsGasPrice;
+impl FeeCalculator for TransactionPaymentAsGasPrice {
+	fn min_gas_price() -> (U256, Weight) {
+		// We do not want to involve Transaction Payment Multiplier here
+		// It will biased normal transfer (base weight is not biased by Multiplier) too much for
+		// Ethereum tx
+		let weight_to_fee: u128 = 1;
+		let min_gas_price = weight_to_fee.saturating_mul(WEIGHT_PER_GAS as u128);
+		(min_gas_price.into(), <Runtime as frame_system::Config>::DbWeight::get().reads(1))
+	}
+}
 
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
 impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
@@ -344,7 +488,7 @@ impl pallet_evm::Config for Runtime {
 	type ChainId = EVMChainId;
 	type BlockGasLimit = BlockGasLimit;
 	type Runner = pallet_evm::runner::stack::Runner<Self>;
-	type OnChargeTransaction = ();
+	type OnChargeTransaction = OnChargeEVMTransaction<DealWithFees<Runtime>>;
 	type OnCreate = ();
 	type FindAuthor = FindAuthorTruncated<Aura>;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
@@ -364,16 +508,13 @@ impl pallet_ethereum::Config for Runtime {
 	type ExtraDataLength = ConstU32<30>;
 }
 
-parameter_types! {
-	pub BoundDivision: U256 = U256::from(1024);
-}
-
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime {
 		System: frame_system,
 		Timestamp: pallet_timestamp,
 		Aura: pallet_aura,
+		Authorship: pallet_authorship,
 		Grandpa: pallet_grandpa,
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
@@ -769,7 +910,7 @@ impl_runtime_apis! {
 		}
 
 		fn elasticity() -> Option<Permill> {
-			Some(pallet_base_fee::Elasticity::<Runtime>::get())
+			None
 		}
 
 		fn gas_limit_multiplier_support() {}
@@ -878,11 +1019,9 @@ impl_runtime_apis! {
 
 			use baseline::Pallet as BaselineBench;
 			use frame_system_benchmarking::Pallet as SystemBench;
-			use pallet_hotfix_sufficients::Pallet as PalletHotfixSufficients;
 
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
-			list_benchmark!(list, extra, pallet_hotfix_sufficients, PalletHotfixSufficients::<Runtime>);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 			(list, storage_info)
@@ -895,7 +1034,6 @@ impl_runtime_apis! {
 			use frame_support::traits::TrackedStorageKey;
 
 			use pallet_evm::Pallet as PalletEvmBench;
-			use pallet_hotfix_sufficients::Pallet as PalletHotfixSufficientsBench;
 
 			impl baseline::Config for Runtime {}
 			impl frame_system_benchmarking::Config for Runtime {}
@@ -906,7 +1044,6 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			add_benchmark!(params, batches, pallet_evm, PalletEvmBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_hotfix_sufficients, PalletHotfixSufficientsBench::<Runtime>);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
