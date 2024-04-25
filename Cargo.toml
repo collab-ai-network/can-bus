@@ -45,6 +45,7 @@ extra-unused-type-parameters = { level = "allow", priority = 2 }     # stylistic
 default_constructed_unit_structs = { level = "allow", priority = 2 } # stylistic
 
 [workspace.dependencies]
+async-trait = "0.1"
 codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = ["derive"] }
 clap = { version = "4.5.3", features = ["derive"] }
 futures = { version = "0.3.30", features = ["thread-pool"] }
@@ -132,6 +133,7 @@ moonbeam-evm-tracer = { git = "https://github.com/litentry/astar-frame.git", bra
 
 # frontier
 fc-api = { git = "https://github.com/polkadot-evm/frontier.git", branch = "polkadot-v1.3.0", default-features = false }
+fc-cli = { git = "https://github.com/polkadot-evm/frontier.git", branch = "polkadot-v1.3.0", default-features = false }
 fc-consensus = { git = "https://github.com/polkadot-evm/frontier.git", branch = "polkadot-v1.3.0", default-features = false }
 fc-db = { git = "https://github.com/polkadot-evm/frontier.git", branch = "polkadot-v1.3.0", default-features = false }
 fc-mapping-sync = { git = "https://github.com/polkadot-evm/frontier.git", branch = "polkadot-v1.3.0", default-features = false }
