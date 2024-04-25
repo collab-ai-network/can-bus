@@ -1,4 +1,5 @@
-use crate::{chain_specs, evm_tracing_types::EthApiOptions};
+use crate::{chain_spec, evm_tracing_types::EthApiOptions};
+use clap::Parser;
 
 /// Sub-commands supported by the collator.
 #[derive(Debug, clap::Subcommand)]

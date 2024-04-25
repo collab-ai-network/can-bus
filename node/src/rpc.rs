@@ -6,8 +6,33 @@
 #![warn(missing_docs)]
 
 use std::sync::Arc;
+// TODO:: move to core_primitives
+// use core_primitives::{AccountId, Balance, Block, Hash, Index as Nonce};
+/// Some way of identifying an account on the chain. We intentionally make it equivalent
+/// to the public key of our transaction signing scheme.
+use sp_runtime::{
+	traits::{IdentifyAccount, Verify},
+	MultiSignature,
+};
+/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
+pub type Signature = MultiSignature;
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+/// Balance of an account.
+pub type Balance = u128;
+/// An index to a block.
+pub type BlockNumber = u32;
+/// Index of a transaction in the chain.
+pub type Nonce = u32;
+/// A hash of some data used by the chain.
+pub type Hash = sp_core::H256;
+use sp_runtime::generic;
+pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+/// Opaque block header type.
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+/// Opaque block type.
+pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+// TODO:: move to core_primitives
 
-use core_primitives::{AccountId, Balance, Block, Hash, Index as Nonce};
 use sc_client_api::{AuxStore, Backend, BlockchainEvents, StateBackend, StorageProvider};
 use sc_network::NetworkService;
 use sc_network_sync::SyncingService;
@@ -19,12 +44,13 @@ use sp_block_builder::BlockBuilder;
 use sp_blockchain::{
 	Backend as BlockchainBackend, Error as BlockChainError, HeaderBackend, HeaderMetadata,
 };
+use sp_inherents::CreateInherentDataProviders;
 use sp_runtime::traits::BlakeTwo256;
 
 // EVM
 use crate::tracing;
 use fc_rpc::{
-	Eth, EthApiServer, EthBlockDataCacheTask, EthFilter, EthFilterApiServer, EthPubSub,
+	pending::AuraConsensusDataProvider, Eth, EthApiServer, EthBlockDataCacheTask, EthFilter, EthFilterApiServer, EthPubSub,
 	EthPubSubApiServer, Net, NetApiServer, OverrideHandle, TxPool, TxPoolApiServer, Web3,
 	Web3ApiServer,
 };
@@ -32,6 +58,9 @@ use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use moonbeam_rpc_debug::{Debug, DebugServer};
 use moonbeam_rpc_trace::{Trace, TraceServer};
 use moonbeam_rpc_txpool::{TxPool as MoonbeamTxPool, TxPoolServer};
+
+/// A type representing all RPC extensions.
+pub type RpcExtension = jsonrpsee::RpcModule<()>;
 
 #[derive(Clone)]
 pub struct EvmTracingConfig {
@@ -68,7 +97,7 @@ where
 }
 
 /// Full client dependencies
-pub struct FullDeps<C, P, A: ChainApi> {
+pub struct FullDeps<C, P, A: ChainApi, CIDP> {
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
@@ -84,7 +113,7 @@ pub struct FullDeps<C, P, A: ChainApi> {
 	/// The Node authority flag
 	pub is_authority: bool,
 	/// Frontier Backend.
-	pub frontier_backend: Arc<dyn fc_db::BackendReader<Block> + Send + Sync>,
+	pub frontier_backend: Arc<dyn fc_api::Backend<Block>>,
 	/// EthFilterApi pool.
 	pub filter_pool: FilterPool,
 	/// Maximum fee history cache size.
@@ -97,11 +126,13 @@ pub struct FullDeps<C, P, A: ChainApi> {
 	pub block_data_cache: Arc<EthBlockDataCacheTask<Block>>,
 	/// Enable EVM RPC servers
 	pub enable_evm_rpc: bool,
+	/// Something that can create the inherent data providers for pending state
+	pub pending_create_inherent_data_providers: CIDP,
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full<C, P, BE, A>(
-	deps: FullDeps<C, P, A>,
+pub fn create_full<C, P, BE, A, CIDP>(
+	deps: FullDeps<C, P, A, CIDP>,
 	subscription_task_executor: SubscriptionTaskExecutor,
 	pubsub_notification_sinks: Arc<
 		fc_mapping_sync::EthereumBlockNotificationSinks<
@@ -134,6 +165,7 @@ where
 	BE::State: StateBackend<BlakeTwo256>,
 	BE::Blockchain: BlockchainBackend<Block>,
 	A: ChainApi<Block = Block> + 'static,
+	CIDP: CreateInherentDataProviders<Block, ()> + Send + 'static,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
@@ -154,6 +186,7 @@ where
 		overrides,
 		block_data_cache,
 		enable_evm_rpc,
+		pending_create_inherent_data_providers,
 	} = deps;
 
 	let cloned = (client.clone(), pool.clone());
@@ -185,6 +218,8 @@ where
 				// Allow 10x max allowed weight for non-transactional calls
 				10,
 				None,
+				pending_create_inherent_data_providers,
+				Some(Box::new(AuraConsensusDataProvider::new(client.clone()))),
 			)
 			.into_rpc(),
 		)?;

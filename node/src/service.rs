@@ -1,13 +1,28 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
-
+// TODO:: move to core_primitives
+use sp_runtime::{
+	traits::{IdentifyAccount, Verify},
+	MultiSignature,
+};
+use sp_runtime::traits::BlakeTwo256;
+/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
+pub type Signature = MultiSignature;
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+/// Balance of an account.
+pub type Balance = u128;
+/// Index of a transaction in the chain.
+pub type Nonce = u32;
+// TODO:: move to core_primitives
 use futures::FutureExt;
 use node_template_runtime::{self, opaque::Block, RuntimeApi};
 use sc_client_api::{Backend, BlockBackend};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sc_consensus_grandpa::SharedVoterState;
 use sc_service::{error::Error as ServiceError, Configuration, TaskManager, WarpSyncParams};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
+use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{sync::Arc, time::Duration};
 
@@ -70,11 +85,11 @@ pub fn new_partial<RuntimeApi, Executor, BIQ>(
 	build_import_queue: BIQ,
 ) -> Result<
 	PartialComponents<
-		ParachainClient<RuntimeApi, Executor>,
-		ParachainBackend,
-		MaybeSelectChain,
-		sc_consensus::DefaultImportQueue<Block, ParachainClient<RuntimeApi, Executor>>,
-		sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi, Executor>>,
+		FullClient<RuntimeApi, Executor>,
+		FullBackend,
+		FullSelectChain,
+		sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
+		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
 		(
 			ParachainBlockImport<RuntimeApi, Executor>,
 			Option<Telemetry>,
@@ -86,27 +101,27 @@ pub fn new_partial<RuntimeApi, Executor, BIQ>(
 >
 where
 	RuntimeApi:
-		ConstructRuntimeApi<Block, ParachainClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::Metadata<Block>
 		+ sp_session::SessionKeys<Block>
 		+ sp_api::ApiExt<
 			Block,
-			StateBackend = sc_client_api::StateBackendFor<ParachainBackend, Block>,
+			StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
 		> + sp_offchain::OffchainWorkerApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ fp_rpc::EthereumRuntimeRPCApi<Block>,
-	sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<FullBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	BIQ: FnOnce(
-		Arc<ParachainClient<RuntimeApi, Executor>>,
+		Arc<FullClient<RuntimeApi, Executor>>,
 		ParachainBlockImport<RuntimeApi, Executor>,
 		&Configuration,
 		Option<TelemetryHandle>,
 		&TaskManager,
 		bool,
 	) -> Result<
-		sc_consensus::DefaultImportQueue<Block, ParachainClient<RuntimeApi, Executor>>,
+		sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
 		sc_service::Error,
 	>,
 {
@@ -165,7 +180,7 @@ where
 
 	let select_chain = Some(LongestChain::new(backend.clone()));
 
-	let frontier_backend = rpc_evm::open_frontier_backend(client.clone(), config)?;
+	let frontier_backend = rpc::open_frontier_backend(client.clone(), config)?;
 
 	let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
 
@@ -199,13 +214,13 @@ pub async fn new_full<RuntimeApi, Executor>(
 ) -> Result<TaskManager, sc_service::Error>
 where
 	RuntimeApi:
-		ConstructRuntimeApi<Block, ParachainClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::Metadata<Block>
 		+ sp_session::SessionKeys<Block>
 		+ sp_api::ApiExt<
 			Block,
-			StateBackend = sc_client_api::StateBackendFor<ParachainBackend, Block>,
+			StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
 		> + sp_offchain::OffchainWorkerApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ sp_consensus_aura::AuraApi<Block, AuraId>
@@ -215,7 +230,7 @@ where
 		+ moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block>
 		+ fp_rpc::EthereumRuntimeRPCApi<Block>
 		+ fp_rpc::ConvertTransactionRuntimeApi<Block>,
-	sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+	sc_client_api::StateBackendFor<FullBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
 	let sc_service::PartialComponents {
@@ -369,7 +384,7 @@ where
 		let client = client.clone();
 		let network = network.clone();
 		let transaction_pool = transaction_pool.clone();
-		let rpc_config = rpc_evm::EvmTracingConfig {
+		let rpc_config = rpc::EvmTracingConfig {
 			tracing_requesters,
 			trace_filter_max_count: evm_tracing_config.ethapi_trace_max_count,
 			enable_txpool: ethapi_cmd.contains(&EthApiCmd::TxPool),
@@ -378,7 +393,7 @@ where
 		let pubsub_notification_sinks = pubsub_notification_sinks;
 
 		Box::new(move |deny_unsafe, subscription| {
-			let deps = rpc_evm::FullDeps {
+			let deps = rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
 				graph: transaction_pool.pool().clone(),
@@ -396,7 +411,7 @@ where
 				enable_evm_rpc: true,
 			};
 
-			crate::rpc::evm::create_full(
+			crate::rpc::create_full(
 				deps,
 				subscription,
 				pubsub_notification_sinks.clone(),
@@ -427,8 +442,8 @@ where
 }
 
 pub fn start_node_evm_impl<RuntimeApi, Executor>(
-	client: Arc<ParachainClient<RuntimeApi, Executor>>,
-	backend: Arc<ParachainBackend>,
+	client: Arc<FullClient<RuntimeApi, Executor>>,
+	backend: Arc<FullBackend>,
 	frontier_backend: Arc<fc_db::kv::Backend<Block>>,
 	task_manager: &mut TaskManager,
 	config: &Configuration,
@@ -450,13 +465,13 @@ pub fn start_node_evm_impl<RuntimeApi, Executor>(
 )
 where
 	RuntimeApi:
-		ConstructRuntimeApi<Block, ParachainClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::Metadata<Block>
 		+ sp_session::SessionKeys<Block>
 		+ sp_api::ApiExt<
 			Block,
-			StateBackend = sc_client_api::StateBackendFor<ParachainBackend, Block>,
+			StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
 		> + sp_offchain::OffchainWorkerApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
@@ -477,6 +492,7 @@ where
 		if ethapi_cmd.contains(&EthApiCmd::Debug) || ethapi_cmd.contains(&EthApiCmd::Trace) {
 			tracing::spawn_tracing_tasks(
 				&evm_tracing_config,
+				prometheus_registry.clone(),
 				tracing::SpawnTasksParams {
 					task_manager,
 					client: client.clone(),
@@ -553,4 +569,86 @@ where
 		tracing_requesters,
 		ethapi_cmd,
 	)
+}
+
+/// Build the import queue for the litmus/litentry/rococo runtime.
+pub fn build_import_queue<RuntimeApi, Executor>(
+	client: Arc<FullClient<RuntimeApi, Executor>>,
+	block_import: ParachainBlockImport<RuntimeApi, Executor>,
+	config: &Configuration,
+	telemetry: Option<TelemetryHandle>,
+	task_manager: &TaskManager,
+) -> Result<
+	sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
+	sc_service::Error,
+>
+where
+	RuntimeApi:
+		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+		+ sp_api::Metadata<Block>
+		+ sp_session::SessionKeys<Block>
+		+ sp_api::ApiExt<
+			Block,
+			StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+		> + sp_offchain::OffchainWorkerApi<Block>
+		+ sp_block_builder::BlockBuilder<Block>
+		+ sp_consensus_aura::AuraApi<Block, AuraId>
+		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
+		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
+		+ fp_rpc::EthereumRuntimeRPCApi<Block>,
+	sc_client_api::StateBackendFor<FullBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+	Executor: sc_executor::NativeExecutionDispatch + 'static,
+{
+	// aura import queue
+	let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
+	let client_for_cidp = client.clone();
+
+	sc_consensus_aura::import_queue::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _>(
+		sc_consensus_aura::ImportQueueParams {
+			block_import,
+			justification_import: None,
+			client,
+			create_inherent_data_providers: move |block: Hash, ()| {
+				let current_para_block = client_for_cidp
+					.number(block)
+					.expect("Header lookup should succeed")
+					.expect("Header passed in as parent should be present in backend.");
+				let client_for_xcm = client_for_cidp.clone();
+
+				async move {
+					let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+					let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+							*timestamp,
+							slot_duration,
+						);
+
+					let mocked_parachain = MockValidationDataInherentDataProvider {
+						current_para_block,
+						relay_offset: 1000,
+						relay_blocks_per_para_block: 2,
+						para_blocks_per_relay_epoch: 0,
+						relay_randomness_config: (),
+						xcm_config: MockXcmConfig::new(
+							&*client_for_xcm,
+							block,
+							Default::default(),
+							Default::default(),
+						),
+						raw_downward_messages: vec![],
+						raw_horizontal_messages: vec![],
+					};
+
+					Ok((slot, timestamp, mocked_parachain))
+				}
+			},
+			spawner: &task_manager.spawn_essential_handle(),
+			registry: config.prometheus_registry(),
+			check_for_equivocation: Default::default(),
+			telemetry,
+			compatibility_mode: Default::default(),
+		},
+	)
+	.map_err(Into::into)
 }

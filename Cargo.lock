@@ -2543,6 +2543,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fp-ethereum"
+version = "1.0.0-dev"
+source = "git+https://github.com/polkadot-evm/frontier.git?branch=polkadot-v1.3.0#e262e80f3083ea8df90bd71a827789bef810f6aa"
+dependencies = [
+ "ethereum 0.15.0",
+ "ethereum-types",
+ "fp-evm",
+ "frame-support",
+ "parity-scale-codec",
+ "sp-std",
+]
+
+[[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier.git?branch=polkadot-v1.3.0#e262e80f3083ea8df90bd71a827789bef810f6aa"
@@ -2573,6 +2586,18 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-std",
+]
+
+[[package]]
+name = "fp-self-contained"
+version = "1.0.0-dev"
+source = "git+https://github.com/polkadot-evm/frontier.git?branch=polkadot-v1.3.0#e262e80f3083ea8df90bd71a827789bef810f6aa"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -4844,6 +4869,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "moonbeam-evm-tracer"
+version = "0.1.0"
+source = "git+https://github.com/litentry/astar-frame.git?branch=polkadot-v1.3.0#419ef22260e38c08aaea931557caaf9a5e871afb"
+dependencies = [
+ "ethereum-types",
+ "evm 0.37.0",
+ "evm-gasometer 0.37.0",
+ "evm-runtime 0.37.0",
+ "evm-tracing-events",
+ "fp-evm",
+ "moonbeam-primitives-ext",
+ "pallet-evm",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "moonbeam-primitives-ext"
 version = "0.1.0"
 source = "git+https://github.com/litentry/astar-frame.git?branch=polkadot-v1.3.0#419ef22260e38c08aaea931557caaf9a5e871afb"
@@ -5229,6 +5274,7 @@ name = "node-template"
 version = "0.0.0"
 dependencies = [
  "clap",
+ "fc-api",
  "fc-consensus",
  "fc-db",
  "fc-mapping-sync",
@@ -5257,7 +5303,9 @@ dependencies = [
  "sc-consensus-grandpa",
  "sc-executor",
  "sc-network",
+ "sc-network-sync",
  "sc-offchain",
+ "sc-rpc",
  "sc-rpc-api",
  "sc-service",
  "sc-telemetry",
@@ -5273,10 +5321,15 @@ dependencies = [
  "sp-inherents",
  "sp-io",
  "sp-keyring",
+ "sp-offchain",
  "sp-runtime",
+ "sp-session",
  "sp-timestamp",
+ "sp-transaction-pool",
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
+ "substrate-prometheus-endpoint",
+ "tokio",
  "try-runtime-cli",
 ]
 
@@ -5284,6 +5337,8 @@ dependencies = [
 name = "node-template-runtime"
 version = "0.0.0"
 dependencies = [
+ "fp-rpc",
+ "fp-self-contained",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -5291,8 +5346,13 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "moonbeam-evm-tracer",
+ "moonbeam-rpc-primitives-debug",
+ "moonbeam-rpc-primitives-txpool",
  "pallet-aura",
  "pallet-balances",
+ "pallet-ethereum",
+ "pallet-evm",
  "pallet-grandpa",
  "pallet-sudo",
  "pallet-template",
@@ -5545,6 +5605,29 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ethereum"
+version = "4.0.0-dev"
+source = "git+https://github.com/polkadot-evm/frontier.git?branch=polkadot-v1.3.0#e262e80f3083ea8df90bd71a827789bef810f6aa"
+dependencies = [
+ "ethereum 0.15.0",
+ "ethereum-types",
+ "evm 0.41.1",
+ "fp-consensus",
+ "fp-ethereum",
+ "fp-evm",
+ "fp-rpc",
+ "fp-storage",
+ "frame-support",
+ "frame-system",
+ "pallet-evm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]

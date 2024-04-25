@@ -67,6 +67,16 @@ frame-system-benchmarking = { workspace = true, optional = true }
 # The pallet in this template.
 pallet-template = { path = "../pallets/template", default-features = false }
 
+# EVM
+fp-rpc = { workspace = true }
+fp-self-contained = { workspace = true }
+pallet-ethereum = { workspace = true }
+pallet-evm = { workspace = true }
+# EVM Moonbeam trace mode
+moonbeam-evm-tracer = { workspace = true }
+moonbeam-rpc-primitives-debug = { workspace = true }
+moonbeam-rpc-primitives-txpool = { workspace = true }
+
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
 
@@ -75,6 +85,9 @@ default = ["std"]
 std = [
 	"codec/std",
 	"scale-info/std",
+
+	"fp-rpc/std",
+    "fp-self-contained/std",
 
 	"frame-executive/std",
 	"frame-support/std",
@@ -88,6 +101,8 @@ std = [
 	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
+	"pallet-ethereum/std",
+    "pallet-evm/std",
 	"pallet-sudo/std",
 	"pallet-template/std",
 	"pallet-timestamp/std",
@@ -109,6 +124,10 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-version/std",
 
+	"moonbeam-evm-tracer/std",
+    "moonbeam-rpc-primitives-debug/std",
+    "moonbeam-rpc-primitives-txpool/std",
+
 	"substrate-wasm-builder",
 ]
 
@@ -119,6 +138,8 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
+	"pallet-ethereum/runtime-benchmarks",
+    "pallet-evm/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
 	"pallet-template/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
@@ -130,9 +151,12 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"frame-try-runtime/try-runtime",
+	"fp-self-contained/try-runtime",
 	"pallet-aura/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-grandpa/try-runtime",
+	"pallet-ethereum/try-runtime",
+    "pallet-evm/try-runtime",
 	"pallet-sudo/try-runtime",
 	"pallet-template/try-runtime",
 	"pallet-timestamp/try-runtime",

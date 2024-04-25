@@ -6,7 +6,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use pallet_grandpa::AuthorityId as GrandpaId;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160, H256, U256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, One, Verify},
@@ -39,7 +39,9 @@ pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
-pub use sp_runtime::{Perbill, Permill};
+pub use sp_runtime::{traits::AccountIdLookup, Perbill, Permill};
+
+use pallet_ethereum::TransactionStatus;
 
 /// Import the template pallet.
 pub use pallet_template;
@@ -145,33 +147,50 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 
-/// The default types are being injected by [`derive_impl`](`frame_support::derive_impl`) from
-/// [`SoloChainDefaultConfig`](`struct@frame_system::config_preludes::SolochainDefaultConfig`),
-/// but overridden as needed.
-#[derive_impl(frame_system::config_preludes::SolochainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
-	/// The block type for the runtime.
+	/// The identifier used to distinguish between accounts.
+	type AccountId = AccountId;
+	/// The aggregated dispatch type that is available for extrinsics.
+	type RuntimeCall = RuntimeCall;
+	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
+	type Lookup = AccountIdLookup<AccountId, ()>;
+	/// The index type for storing how many extrinsics an account has signed.
+	type Nonce = Nonce;
 	type Block = Block;
+	/// The type for hashing blocks and tries.
+	type Hash = Hash;
+	/// The hashing algorithm used.
+	type Hashing = BlakeTwo256;
+	/// The ubiquitous event type.
+	type RuntimeEvent = RuntimeEvent;
+	/// The ubiquitous origin type.
+	type RuntimeOrigin = RuntimeOrigin;
+	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+	type BlockHashCount = BlockHashCount;
+	/// Runtime version.
+	type Version = Version;
+	/// Converts a module to an index of this module in the runtime.
+	type PalletInfo = PalletInfo;
+	/// The data to be stored in an account.
+	type AccountData = pallet_balances::AccountData<Balance>;
+	/// What to do if a new account is created.
+	type OnNewAccount = ();
+	/// What to do if an account is fully reaped from the system.
+	type OnKilledAccount = ();
+	/// The weight of database operations that the runtime can invoke.
+	type DbWeight = RocksDbWeight;
+	/// The basic call filter to use in dispatchable.
+	type BaseCallFilter = frame_support::traits::Everything;
+	/// Weight information for the extrinsics of this pallet.
+	type SystemWeightInfo = ();
 	/// Block & extrinsics weights: base values and limits.
 	type BlockWeights = BlockWeights;
 	/// The maximum length of a block (in bytes).
 	type BlockLength = BlockLength;
-	/// The identifier used to distinguish between accounts.
-	type AccountId = AccountId;
-	/// The type for storing how many extrinsics an account has signed.
-	type Nonce = Nonce;
-	/// The type for hashing blocks and tries.
-	type Hash = Hash;
-	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
-	type BlockHashCount = BlockHashCount;
-	/// The weight of database operations that the runtime can invoke.
-	type DbWeight = RocksDbWeight;
-	/// Version of the runtime.
-	type Version = Version;
-	/// The data to be stored in an account.
-	type AccountData = pallet_balances::AccountData<Balance>;
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
+	/// The action to take on a Runtime Upgrade
+	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
@@ -222,6 +241,7 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
+	type MaxHolds = ();
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
 }
@@ -251,49 +271,19 @@ impl pallet_template::Config for Runtime {
 	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
-// Create the runtime by composing the FRAME pallets that were previously configured.
-#[frame_support::runtime]
-mod runtime {
-	#[runtime::runtime]
-	#[runtime::derive(
-		RuntimeCall,
-		RuntimeEvent,
-		RuntimeError,
-		RuntimeOrigin,
-		RuntimeFreezeReason,
-		RuntimeHoldReason,
-		RuntimeSlashReason,
-		RuntimeLockId,
-		RuntimeTask
-	)]
-	pub struct Runtime;
-
-	#[runtime::pallet_index(0)]
-	pub type System = frame_system;
-
-	#[runtime::pallet_index(1)]
-	pub type Timestamp = pallet_timestamp;
-
-	#[runtime::pallet_index(2)]
-	pub type Aura = pallet_aura;
-
-	#[runtime::pallet_index(3)]
-	pub type Grandpa = pallet_grandpa;
-
-	#[runtime::pallet_index(4)]
-	pub type Balances = pallet_balances;
-
-	#[runtime::pallet_index(5)]
-	pub type TransactionPayment = pallet_transaction_payment;
-
-	#[runtime::pallet_index(6)]
-	pub type Sudo = pallet_sudo;
-
-	// Include the custom logic from the pallet-template in the runtime.
-	#[runtime::pallet_index(7)]
-	pub type TemplateModule = pallet_template;
+construct_runtime! {
+	pub enum Runtime 
+	{
+		System: frame_system = 0,
+		Timestamp: pallet_timestamp = 1,
+		Balances: pallet_balances = 2,
+		TransactionPayment: pallet_transaction_payment = 3,
+		Aura: pallet_aura = 4,
+		Grandpa: pallet_grandpa = 5,
+		Sudo: pallet_sudo = 6,
+		TemplateModule: pallet_template = 7,
+	}
 }
-
 /// The address format for describing accounts.
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 /// Block header type as expected by this runtime.
@@ -355,7 +345,7 @@ impl_runtime_apis! {
 			Executive::execute_block(block);
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
+		fn initialize_block(header: &<Block as BlockT>::Header) {
 			Executive::initialize_block(header)
 		}
 	}
@@ -551,6 +541,149 @@ impl_runtime_apis! {
 			add_benchmarks!(params, batches);
 
 			Ok(batches)
+		}
+	}
+
+	// TODO::Temporary fake implementation
+	impl fp_rpc::EthereumRuntimeRPCApi<Block> for Runtime {
+		fn chain_id() -> u64 {
+			Default::default()
+		}
+
+		fn account_basic(_address: H160) -> pallet_evm::Account {
+			Default::default()
+		}
+
+		fn gas_price() -> U256 {
+			Default::default()
+		}
+
+		fn account_code_at(_address: H160) -> Vec<u8> {
+			Default::default()
+		}
+
+		fn author() -> H160 {
+			Default::default()
+		}
+
+		fn storage_at(_address: H160, _index: U256) -> H256 {
+			Default::default()
+		}
+
+		fn call(
+			_from: H160,
+			_to: H160,
+			_data: Vec<u8>,
+			_value: U256,
+			_gas_limit: U256,
+			_max_fee_per_gas: Option<U256>,
+			_max_priority_fee_per_gas: Option<U256>,
+			_nonce: Option<U256>,
+			_estimate: bool,
+			_access_list: Option<Vec<(H160, Vec<H256>)>>,
+		) -> Result<pallet_evm::CallInfo, sp_runtime::DispatchError> {
+			Err(sp_runtime::DispatchError::Unavailable)
+		}
+
+		fn create(
+			_from: H160,
+			_data: Vec<u8>,
+			_value: U256,
+			_gas_limit: U256,
+			_max_fee_per_gas: Option<U256>,
+			_max_priority_fee_per_gas: Option<U256>,
+			_nonce: Option<U256>,
+			_estimate: bool,
+			_access_list: Option<Vec<(H160, Vec<H256>)>>,
+		) -> Result<pallet_evm::CreateInfo, sp_runtime::DispatchError> {
+			Err(sp_runtime::DispatchError::Unavailable)
+		}
+
+		fn current_transaction_statuses() -> Option<Vec<TransactionStatus>> {
+			None
+		}
+
+		fn current_block() -> Option<pallet_ethereum::Block> {
+			None
+		}
+
+		fn current_receipts() -> Option<Vec<pallet_ethereum::Receipt>> {
+			None
+		}
+
+		fn current_all() -> (
+			Option<pallet_ethereum::Block>,
+			Option<Vec<pallet_ethereum::Receipt>>,
+			Option<Vec<TransactionStatus>>
+		) {
+			(
+				None,
+				None,
+				None
+			)
+		}
+
+		fn extrinsic_filter(
+			_xts: Vec<<Block as BlockT>::Extrinsic>,
+		) -> Vec<pallet_ethereum::Transaction> {
+			Default::default()
+		}
+
+		fn elasticity() -> Option<Permill> {
+			None
+		}
+
+		fn gas_limit_multiplier_support() {}
+
+		fn pending_block(
+			_xts: Vec<<Block as BlockT>::Extrinsic>,
+		) -> (Option<pallet_ethereum::Block>, Option<Vec<fp_rpc::TransactionStatus>>) {
+			(None, None)
+		}
+	}
+
+	// TODO::Temporary fake implementation
+	impl fp_rpc::ConvertTransactionRuntimeApi<Block> for Runtime {
+		fn convert_transaction(_transaction: pallet_ethereum::Transaction) -> <Block as BlockT>::Extrinsic {
+			UncheckedExtrinsic::new_unsigned(
+				frame_system::Call::<Runtime>::remark { remark: Default::default() }.into(),
+			)
+		}
+	}
+
+	// TODO::Temporary fake implementation
+	impl moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block> for Runtime {
+		fn trace_transaction(
+			_extrinsics: Vec<<Block as BlockT>::Extrinsic>,
+			_traced_transaction: &pallet_ethereum::Transaction,
+		) -> Result<
+			(),
+			sp_runtime::DispatchError,
+		> {
+			Ok(())
+		}
+
+		fn trace_block(
+			_extrinsics: Vec<<Block as BlockT>::Extrinsic>,
+			_known_transactions: Vec<H256>,
+		) -> Result<
+			(),
+			sp_runtime::DispatchError,
+		> {
+			Ok(())
+		}
+	}
+
+	// TODO::Temporary fake implementation
+	impl moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block> for Runtime {
+		fn extrinsic_filter(
+			_xts_ready: Vec<<Block as BlockT>::Extrinsic>,
+			_xts_future: Vec<<Block as BlockT>::Extrinsic>,
+		) -> moonbeam_rpc_primitives_txpool::TxPoolResponse {
+			moonbeam_rpc_primitives_txpool::TxPoolResponse {
+				ready: Default::default(),
+				future: Default::default(),
+			}
 		}
 	}
 

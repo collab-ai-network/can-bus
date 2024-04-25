@@ -21,6 +21,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 clap = { workspace = true, features = ["derive"] }
 futures = { workspace = true, features = ["thread-pool"] }
 serde_json = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
 jsonrpsee = { workspace = true, features = ["server"] }
 
 # substrate client
@@ -28,6 +29,7 @@ sc-cli = { workspace = true }
 sp-core = { workspace = true }
 sc-executor = { workspace = true }
 sc-network = { workspace = true }
+sc-network-sync = { workspace = true }
 sc-service = { workspace = true }
 sc-telemetry = { workspace = true }
 sc-transaction-pool = { workspace = true }
@@ -39,6 +41,7 @@ sc-consensus = { workspace = true }
 sc-consensus-grandpa = { workspace = true }
 sp-consensus-grandpa = { workspace = true }
 sc-client-api = { workspace = true }
+sc-rpc = { workspace = true }
 sc-rpc-api = { workspace = true }
 sc-basic-authorship = { workspace = true }
 
@@ -46,19 +49,24 @@ sc-basic-authorship = { workspace = true }
 sp-runtime = { workspace = true }
 sp-io = { workspace = true }
 sp-timestamp = { workspace = true }
+sp-transaction-pool = { workspace = true }
 sp-inherents = { workspace = true }
 sp-keyring = { workspace = true }
 sp-api = { workspace = true }
 sp-blockchain = { workspace = true }
 sp-block-builder = { workspace = true }
+sp-offchain = { workspace = true }
+sp-session = { workspace = true }
 
 # frame and pallets
 frame-system = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
+substrate-prometheus-endpoint = { workspace = true }
 
 # evm related
+fc-api = { workspace = true }
 fc-consensus = { workspace = true }
 fc-db = { workspace = true }
 fc-mapping-sync = { workspace = true }

@@ -2,7 +2,7 @@ use crate::{
 	benchmarking::{inherent_benchmark_data, RemarkBuilder, TransferKeepAliveBuilder},
 	chain_spec,
 	cli::{Cli, Subcommand},
-	service,
+	service::*,
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use node_template_runtime::{Block, EXISTENTIAL_DEPOSIT};
@@ -64,13 +64,13 @@ pub fn run() -> sc_cli::Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, import_queue, .. } =
-					service::new_partial::<
+					new_partial::<
 						node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 						_,
 					>(
 						&config,
-						crate::service::build_import_queue::<
+						build_import_queue::<
 							node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 						>,
@@ -81,13 +81,13 @@ pub fn run() -> sc_cli::Result<()> {
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, .. } = service::new_partial::<
+				let PartialComponents { client, task_manager, .. } = new_partial::<
 					node_template_runtime::RuntimeApi,
 					CollabAIRuntimeExecutor,
 					_,
 				>(
 					&config,
-					crate::service::build_import_queue::<
+					build_import_queue::<
 						node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 					>,
@@ -98,13 +98,13 @@ pub fn run() -> sc_cli::Result<()> {
 		Some(Subcommand::ExportState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, .. } = service::new_partial::<
+				let PartialComponents { client, task_manager, .. } = new_partial::<
 					node_template_runtime::RuntimeApi,
 					CollabAIRuntimeExecutor,
 					_,
 				>(
 					&config,
-					crate::service::build_import_queue::<
+					build_import_queue::<
 						node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 					>,
@@ -116,13 +116,13 @@ pub fn run() -> sc_cli::Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
 				let PartialComponents { client, task_manager, import_queue, .. } =
-					service::new_partial::<
+					new_partial::<
 						node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 						_,
 					>(
 						&config,
-						crate::service::build_import_queue::<
+						build_import_queue::<
 							node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 						>,
@@ -137,13 +137,13 @@ pub fn run() -> sc_cli::Result<()> {
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, backend, .. } = service::new_partial::<
+				let PartialComponents { client, task_manager, backend, .. } = new_partial::<
 					node_template_runtime::RuntimeApi,
 					CollabAIRuntimeExecutor,
 					_,
 				>(
 					&config,
-					crate::service::build_import_queue::<
+					build_import_queue::<
 						node_template_runtime::RuntimeApi,
 						CollabAIRuntimeExecutor,
 					>,
@@ -174,13 +174,13 @@ pub fn run() -> sc_cli::Result<()> {
 						cmd.run::<sp_runtime::traits::HashingFor<Block>, ()>(config)
 					},
 					BenchmarkCmd::Block(cmd) => {
-						let PartialComponents { client, .. } = service::new_partial::<
+						let PartialComponents { client, .. } = new_partial::<
 							node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 							_,
 						>(
 							&config,
-							crate::service::build_import_queue::<
+							build_import_queue::<
 								node_template_runtime::RuntimeApi,
 								CollabAIRuntimeExecutor,
 							>,
@@ -194,13 +194,13 @@ pub fn run() -> sc_cli::Result<()> {
 					),
 					#[cfg(feature = "runtime-benchmarks")]
 					BenchmarkCmd::Storage(cmd) => {
-						let PartialComponents { client, backend, .. } = service::new_partial::<
+						let PartialComponents { client, backend, .. } = new_partial::<
 							node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 							_,
 						>(
 							&config,
-							crate::service::build_import_queue::<
+							build_import_queue::<
 								node_template_runtime::RuntimeApi,
 								CollabAIRuntimeExecutor,
 							>,
@@ -211,13 +211,13 @@ pub fn run() -> sc_cli::Result<()> {
 						cmd.run(config, client, db, storage)
 					},
 					BenchmarkCmd::Overhead(cmd) => {
-						let PartialComponents { client, .. } = service::new_partial::<
+						let PartialComponents { client, .. } = new_partial::<
 							node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 							_,
 						>(
 							&config,
-							crate::service::build_import_queue::<
+							build_import_queue::<
 								node_template_runtime::RuntimeApi,
 								CollabAIRuntimeExecutor,
 							>,
@@ -233,13 +233,13 @@ pub fn run() -> sc_cli::Result<()> {
 						)
 					},
 					BenchmarkCmd::Extrinsic(cmd) => {
-						let PartialComponents { client, .. } = service::new_partial::<
+						let PartialComponents { client, .. } = new_partial::<
 							node_template_runtime::RuntimeApi,
 							CollabAIRuntimeExecutor,
 							_,
 						>(
 							&config,
-							crate::service::build_import_queue::<
+							build_import_queue::<
 								node_template_runtime::RuntimeApi,
 								CollabAIRuntimeExecutor,
 							>,
@@ -285,7 +285,7 @@ pub fn run() -> sc_cli::Result<()> {
 				tracing_raw_max_memory_usage: cli.eth_api_options.tracing_raw_max_memory_usage,
 			};
 			runner.run_node_until_exit(|config| async move {
-				service::new_full(config, evm_tracing_config).map_err(sc_cli::Error::Service)
+				new_full(config, evm_tracing_config).map_err(sc_cli::Error::Service)
 			})
 		},
 	}
