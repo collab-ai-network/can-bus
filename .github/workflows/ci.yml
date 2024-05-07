@@ -108,9 +108,9 @@ jobs:
 
       - name: Check build
         run: |
-          SKIP_WASM_BUILD=1 cargo check --release
+          SKIP_WASM_BUILD=1 cargo check
 
       - name: Check build for benchmarking
         run: >
           pushd node &&
-          cargo check --features=runtime-benchmarks --release
+          cargo check --features=runtime-benchmarks
