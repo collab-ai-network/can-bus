@@ -1,5 +1,5 @@
 [package]
-name = "node-template-runtime"
+name = "can-runtime"
 description = "A solochain runtime template built with Substrate, part of Polkadot Sdk."
 version = "0.0.0"
 license = "MIT-0"

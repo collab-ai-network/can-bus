@@ -62,7 +62,7 @@ substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk
 frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-v1.9.0" }
 
 # Local Dependencies
-node-template-runtime = { path = "../runtime" }
+can-runtime = { path = "../runtime" }
 
 # CLI-specific dependencies
 try-runtime-cli = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-v1.9.0", optional = true }
@@ -77,7 +77,7 @@ runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sc-service/runtime-benchmarks",
-	"node-template-runtime/runtime-benchmarks",
+	"can-runtime/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
 # Enable features that allow the runtime to be tried and debugged. Name might be subject to change
@@ -85,7 +85,7 @@ runtime-benchmarks = [
 try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-transaction-payment/try-runtime",
-	"node-template-runtime/try-runtime",
+	"can-runtime/try-runtime",
 	"sp-runtime/try-runtime",
 	"try-runtime-cli/try-runtime",
 ]

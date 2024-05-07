@@ -2,10 +2,26 @@ version: 2
 updates:
   - package-ecosystem: "cargo"
     directory: "/"
+    # Handle updates for crates from polkadot-sdk manually.
+    ignore:
+      - dependency-name: "substrate-*"
+      - dependency-name: "sc-*"
+      - dependency-name: "sp-*"
+      - dependency-name: "frame-*"
+      - dependency-name: "fork-tree"
+      - dependency-name: "remote-externalities"
+      - dependency-name: "pallet-*"
+      - dependency-name: "beefy-*"
+      - dependency-name: "try-runtime-*"
+      - dependency-name: "test-runner"
+      - dependency-name: "generate-bags"
+      - dependency-name: "sub-tokens"
+      - dependency-name: "polkadot-*"
+      - dependency-name: "xcm*"
     schedule:
-      interval: "daily"
+      interval: "weekly"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
