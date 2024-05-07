@@ -896,6 +896,7 @@ version = "0.0.0"
 dependencies = [
  "canbus-runtime",
  "clap",
+ "frame-benchmarking",
  "frame-benchmarking-cli",
  "frame-system",
  "futures",
@@ -903,6 +904,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
+ "sc-chain-spec",
  "sc-cli",
  "sc-client-api",
  "sc-consensus",

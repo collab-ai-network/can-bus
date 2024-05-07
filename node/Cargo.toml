@@ -24,6 +24,7 @@ serde_json = { workspace = true, features = ["std"] }
 jsonrpsee = { workspace = true }
 
 sc-cli = { workspace = true }
+sc-chain-spec = { workspace = true }
 sp-core = { workspace = true, features = ["std"] }
 sc-executor = { workspace = true }
 sc-network = { workspace = true }
@@ -54,6 +55,7 @@ frame-system = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
+frame-benchmarking = { workspace = true }
 frame-benchmarking-cli = { workspace = true }
 try-runtime-cli = { workspace = true, optional = true }
 
@@ -65,6 +67,7 @@ substrate-build-script-utils = { workspace = true }
 [features]
 default = []
 runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
 	"frame-benchmarking-cli/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sc-service/runtime-benchmarks",

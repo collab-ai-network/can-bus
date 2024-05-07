@@ -63,6 +63,7 @@ jsonrpsee = { version = "0.16", features = ["server"] }
 
 # substrate client
 sc-cli = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.3.0" }
+sc-chain-spec = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.3.0" }
 sc-executor = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.3.0" }
 sc-network = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.3.0" }
 sc-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.3.0" }

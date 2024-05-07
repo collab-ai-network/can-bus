@@ -93,12 +93,19 @@ pub mod opaque {
 	}
 }
 
+pub const UNIT: Balance = 1_000_000_000_000_000_000;
+pub const DOLLARS: Balance = UNIT;
+pub const CENTS: Balance = DOLLARS / 100;
+pub const MILLICENTS: Balance = CENTS / 1_000;
+
+pub const EXISTENTIAL_DEPOSIT: Balance = 10 * CENTS;
+
 // To learn more about runtime versioning, see:
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("node-template"),
-	impl_name: create_runtime_str!("node-template"),
+	spec_name: create_runtime_str!("canbus"),
+	impl_name: create_runtime_str!("canbus"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
 	//   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
@@ -233,9 +240,6 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
-/// Existential deposit.
-pub const EXISTENTIAL_DEPOSIT: u128 = 500;
-
 impl pallet_balances::Config for Runtime {
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ();
@@ -283,15 +287,15 @@ impl pallet_template::Config for Runtime {
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime {
-		System: frame_system,
-		Timestamp: pallet_timestamp,
-		Aura: pallet_aura,
-		Grandpa: pallet_grandpa,
-		Balances: pallet_balances,
-		TransactionPayment: pallet_transaction_payment,
-		Sudo: pallet_sudo,
+		System: frame_system = 0,
+		Timestamp: pallet_timestamp = 1,
+		Aura: pallet_aura = 2,
+		Grandpa: pallet_grandpa = 3,
+		Balances: pallet_balances = 4,
+		TransactionPayment: pallet_transaction_payment = 5,
+		Sudo: pallet_sudo = 6,
 		// Include the custom logic from the pallet-template in the runtime.
-		TemplateModule: pallet_template,
+		TemplateModule: pallet_template = 7,
 	}
 );
 
