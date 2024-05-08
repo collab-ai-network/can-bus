@@ -1,6 +1,6 @@
 use canbus_runtime::{
-	AccountId, AuraConfig, BalancesConfig, GrandpaConfig, RuntimeGenesisConfig, Signature,
-	SudoConfig, SystemConfig, WASM_BINARY,
+	AccountId, AuraConfig, BalancesConfig, EVMChainIdConfig, GrandpaConfig, RuntimeGenesisConfig,
+	Signature, SudoConfig, SystemConfig, WASM_BINARY,
 };
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
@@ -9,8 +9,7 @@ use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
-// The URL for the telemetry server.
-// const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const DEFAULT_EVM_CHAIN_ID: u64 = 42;
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig>;
@@ -114,5 +113,11 @@ fn build_genesis(
 			key: Some(root_key),
 		},
 		transaction_payment: Default::default(),
+		// EVM compatibility
+		evm_chain_id: EVMChainIdConfig { chain_id: DEFAULT_EVM_CHAIN_ID, ..Default::default() },
+		ethereum: Default::default(),
+		evm: Default::default(),
+		dynamic_fee: Default::default(),
+		base_fee: Default::default(),
 	}
 }
