@@ -140,6 +140,8 @@ runtime-benchmarks = [
 	"pallet-template/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+	"pallet-ethereum/runtime-benchmarks",
+	"pallet-evm/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -155,6 +157,12 @@ try-runtime = [
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"sp-runtime/try-runtime",
+	"fp-self-contained/try-runtime",
+	"pallet-ethereum/try-runtime",
+    "pallet-evm/try-runtime",
+	"pallet-evm-chain-id/try-runtime",
+	"pallet-base-fee/try-runtime",
+	"pallet-dynamic-fee/try-runtime",
 ]
 
 experimental = ["pallet-aura/experimental"]
