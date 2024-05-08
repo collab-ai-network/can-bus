@@ -59,6 +59,19 @@ frame-benchmarking = { workspace = true }
 frame-benchmarking-cli = { workspace = true }
 try-runtime-cli = { workspace = true, optional = true }
 
+fc-api = { workspace = true }
+fc-cli = { workspace = true }
+fc-consensus = { workspace = true }
+fc-db = { workspace = true }
+fc-mapping-sync = { workspace = true }
+fc-rpc = { workspace = true }
+fc-rpc-core = { workspace = true }
+fc-storage = { workspace = true }
+fp-account = { workspace = true }
+fp-dynamic-fee = { workspace = true, features = ["std"] }
+fp-evm = { workspace = true, features = ["std"] }
+fp-rpc = { workspace = true, features = ["std"] }
+
 canbus-runtime = { workspace = true, features = ["std"] }
 
 [build-dependencies]
