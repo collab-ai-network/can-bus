@@ -116,7 +116,6 @@ fn build_genesis(
 		evm_chain_id: EVMChainIdConfig { chain_id: DEFAULT_EVM_CHAIN_ID, ..Default::default() },
 		ethereum: Default::default(),
 		evm: Default::default(),
-		dynamic_fee: Default::default(),
 		base_fee: Default::default(),
 	}
 }
