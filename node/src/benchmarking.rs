@@ -1,30 +1,47 @@
-//! Setup code for [`super::command`] which would otherwise bloat that module.
-//!
-//! Should only be used for benchmarking as it may break in other contexts.
+// This file is part of Substrate.
 
-use crate::service::FullClient;
+// Copyright (C) 2022 Parity Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
-use canbus_runtime as runtime;
-use runtime::{AccountId, Balance, BalancesCall, SystemCall};
-use sc_cli::Result;
-use sc_client_api::BlockBackend;
-use sp_core::{Encode, Pair};
-use sp_inherents::{InherentData, InherentDataProvider};
-use sp_keyring::Sr25519Keyring;
-use sp_runtime::{OpaqueExtrinsic, SaturatedConversion};
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! Contains code to setup the command invocations in [`super::command`] which would
+//! otherwise bloat that module.
 
 use std::{sync::Arc, time::Duration};
+
+use canbus_runtime::{self as runtime, AccountId, Balance, BalancesCall, SystemCall};
+use codec::Encode;
+use sc_cli::Result;
+use sc_client_api::BlockBackend;
+use sp_core::Pair;
+use sp_inherents::{InherentData, InherentDataProvider};
+use sp_keyring::Sr25519Keyring;
+use sp_runtime::{generic::Era, OpaqueExtrinsic, SaturatedConversion};
+
+use crate::client::Client;
 
 /// Generates extrinsics for the `benchmark overhead` command.
 ///
 /// Note: Should only be used for benchmarking.
 pub struct RemarkBuilder {
-	client: Arc<FullClient>,
+	client: Arc<Client>,
 }
 
 impl RemarkBuilder {
 	/// Creates a new [`Self`] from the given client.
-	pub fn new(client: Arc<FullClient>) -> Self {
+	pub fn new(client: Arc<Client>) -> Self {
 		Self { client }
 	}
 }
@@ -56,14 +73,14 @@ impl frame_benchmarking_cli::ExtrinsicBuilder for RemarkBuilder {
 ///
 /// Note: Should only be used for benchmarking.
 pub struct TransferKeepAliveBuilder {
-	client: Arc<FullClient>,
+	client: Arc<Client>,
 	dest: AccountId,
 	value: Balance,
 }
 
 impl TransferKeepAliveBuilder {
 	/// Creates a new [`Self`] from the given client.
-	pub fn new(client: Arc<FullClient>, dest: AccountId, value: Balance) -> Self {
+	pub fn new(client: Arc<Client>, dest: AccountId, value: Balance) -> Self {
 		Self { client, dest, value }
 	}
 }
@@ -96,7 +113,7 @@ impl frame_benchmarking_cli::ExtrinsicBuilder for TransferKeepAliveBuilder {
 ///
 /// Note: Should only be used for benchmarking.
 pub fn create_benchmark_extrinsic(
-	client: &FullClient,
+	client: &Client,
 	sender: sp_core::sr25519::Pair,
 	call: runtime::RuntimeCall,
 	nonce: u32,
@@ -114,7 +131,7 @@ pub fn create_benchmark_extrinsic(
 		frame_system::CheckSpecVersion::<runtime::Runtime>::new(),
 		frame_system::CheckTxVersion::<runtime::Runtime>::new(),
 		frame_system::CheckGenesis::<runtime::Runtime>::new(),
-		frame_system::CheckEra::<runtime::Runtime>::from(sp_runtime::generic::Era::mortal(
+		frame_system::CheckMortality::<runtime::Runtime>::from(Era::mortal(
 			period,
 			best_block.saturated_into(),
 		)),
