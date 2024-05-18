@@ -19,7 +19,6 @@
 use fp_evm::PrecompileHandle;
 
 use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
-use frame_support::traits::{Get, OriginTrait};
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
 use sp_runtime::traits::Dispatchable;
