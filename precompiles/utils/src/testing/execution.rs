@@ -50,11 +50,7 @@ impl<'p, P: PrecompileSet> PrecompilesTester<'p, P> {
 		let to = to.into();
 		let mut handle = MockHandle::new(
 			to.clone(),
-			Context {
-				address: to,
-				caller: from.into(),
-				apparent_value: U256::zero(),
-			},
+			Context { address: to, caller: from.into(), apparent_value: U256::zero() },
 		);
 
 		handle.input = data;
@@ -163,12 +159,9 @@ impl<'p, P: PrecompileSet> PrecompilesTester<'p, P> {
 					"Revert message (bytes): {:?}",
 					sp_core::hexdisplay::HexDisplay::from(&decoded)
 				);
-				eprintln!(
-					"Revert message (string): {:?}",
-					core::str::from_utf8(decoded).ok()
-				);
+				eprintln!("Revert message (string): {:?}", core::str::from_utf8(decoded).ok());
 				panic!("Shouldn't have reverted");
-			}
+			},
 			Some(Ok(PrecompileOutput {
 				exit_status: ExitSucceed::Returned,
 				output: execution_output,
@@ -184,7 +177,7 @@ impl<'p, P: PrecompileSet> PrecompilesTester<'p, P> {
 					);
 					panic!("Output doesn't match");
 				}
-			}
+			},
 			other => panic!("Unexpected result: {:?}", other),
 		}
 
@@ -209,13 +202,10 @@ impl<'p, P: PrecompileSet> PrecompilesTester<'p, P> {
 						"Revert message (bytes): {:?}",
 						sp_core::hexdisplay::HexDisplay::from(&decoded)
 					);
-					eprintln!(
-						"Revert message (string): {:?}",
-						core::str::from_utf8(decoded).ok()
-					);
+					eprintln!("Revert message (string): {:?}", core::str::from_utf8(decoded).ok());
 					panic!("Revert reason doesn't match !");
 				}
-			}
+			},
 			other => panic!("Didn't revert, instead returned {:?}", other),
 		}
 
@@ -225,10 +215,7 @@ impl<'p, P: PrecompileSet> PrecompilesTester<'p, P> {
 	/// Execute the precompile set and check it returns provided output.
 	pub fn execute_error(mut self, error: ExitError) {
 		let res = self.execute();
-		assert_eq!(
-			res,
-			Some(Err(PrecompileFailure::Error { exit_status: error }))
-		);
+		assert_eq!(res, Some(Err(PrecompileFailure::Error { exit_status: error })));
 		self.assert_optionals();
 	}
 }

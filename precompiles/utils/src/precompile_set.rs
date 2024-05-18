@@ -111,13 +111,11 @@ pub enum DiscriminantResult<T> {
 impl<T> Into<IsPrecompileResult> for DiscriminantResult<T> {
 	fn into(self) -> IsPrecompileResult {
 		match self {
-			Self::Some(_, extra_cost) => IsPrecompileResult::Answer {
-				is_precompile: true,
-				extra_cost,
+			Self::Some(_, extra_cost) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost }
 			},
-			Self::None(extra_cost) => IsPrecompileResult::Answer {
-				is_precompile: false,
-				extra_cost,
+			Self::None(extra_cost) => {
+				IsPrecompileResult::Answer { is_precompile: false, extra_cost }
 			},
 			Self::OutOfGas => IsPrecompileResult::OutOfGas,
 		}
@@ -396,9 +394,9 @@ fn common_checks<R: pallet_evm::Config, C: PrecompileChecks>(
 pub fn is_precompile_or_fail<R: pallet_evm::Config>(address: H160, gas: u64) -> EvmResult<bool> {
 	match <R as pallet_evm::Config>::PrecompilesValue::get().is_precompile(address, gas) {
 		IsPrecompileResult::Answer { is_precompile, .. } => Ok(is_precompile),
-		IsPrecompileResult::OutOfGas => Err(PrecompileFailure::Error {
-			exit_status: ExitError::OutOfGas,
-		}),
+		IsPrecompileResult::OutOfGas => {
+			Err(PrecompileFailure::Error { exit_status: ExitError::OutOfGas })
+		},
 	}
 }
 
@@ -432,8 +430,7 @@ impl<'a, H: PrecompileHandle> PrecompileHandle for RestrictiveHandle<'a, H> {
 			);
 		}
 
-		self.handle
-			.call(address, transfer, input, target_gas, is_static, context)
+		self.handle.call(address, transfer, input, target_gas, is_static, context)
 	}
 
 	fn record_cost(&mut self, cost: u64) -> Result<(), evm::ExitError> {
@@ -479,8 +476,7 @@ impl<'a, H: PrecompileHandle> PrecompileHandle for RestrictiveHandle<'a, H> {
 		proof_size: Option<u64>,
 		storage_growth: Option<u64>,
 	) -> Result<(), ExitError> {
-		self.handle
-			.record_external_cost(ref_time, proof_size, storage_growth)
+		self.handle.record_external_cost(ref_time, proof_size, storage_growth)
 	}
 
 	fn refund_external_cost(&mut self, ref_time: Option<u64>, proof_size: Option<u64>) {
@@ -541,10 +537,7 @@ where
 {
 	#[inline(always)]
 	fn new() -> Self {
-		Self {
-			current_recursion_level: RefCell::new(0),
-			_phantom: PhantomData,
-		}
+		Self { current_recursion_level: RefCell::new(0), _phantom: PhantomData }
 	}
 
 	#[inline(always)]
@@ -576,7 +569,7 @@ where
 					}
 
 					*recursion_level += 1;
-				}
+				},
 				// We don't hold the borrow and are in single-threaded code, thus we should
 				// not be able to fail borrowing in nested calls.
 				Err(_) => return Some(Err(revert("Couldn't check precompile nesting").into())),
@@ -585,10 +578,7 @@ where
 
 		// Subcall protection.
 		let allow_subcalls = C::allow_subcalls().unwrap_or(false);
-		let mut handle = RestrictiveHandle {
-			handle,
-			allow_subcalls,
-		};
+		let mut handle = RestrictiveHandle { handle, allow_subcalls };
 
 		let res = P::execute(&mut handle);
 
@@ -597,7 +587,7 @@ where
 			match self.current_recursion_level.try_borrow_mut() {
 				Ok(mut recursion_level) => {
 					*recursion_level -= 1;
-				}
+				},
 				// We don't hold the borrow and are in single-threaded code, thus we should
 				// not be able to fail borrowing in nested calls.
 				Err(_) => return Some(Err(revert("Couldn't check precompile nesting").into())),
@@ -609,10 +599,7 @@ where
 
 	#[inline(always)]
 	fn is_precompile(&self, address: H160, _gas: u64) -> IsPrecompileResult {
-		IsPrecompileResult::Answer {
-			is_precompile: address == A::get(),
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: address == A::get(), extra_cost: 0 }
 	}
 
 	#[inline(always)]
@@ -640,10 +627,7 @@ where
 {
 	#[inline(always)]
 	fn is_active_precompile(&self, address: H160, _gas: u64) -> IsPrecompileResult {
-		IsPrecompileResult::Answer {
-			is_precompile: address == A::get(),
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: address == A::get(), extra_cost: 0 }
 	}
 }
 
@@ -699,7 +683,7 @@ where
 					}
 
 					*recursion_level += 1;
-				}
+				},
 				// We don't hold the borrow and are in single-threaded code, thus we should
 				// not be able to fail borrowing in nested calls.
 				Err(_) => return Some(Err(revert("Couldn't check precompile nesting"))),
@@ -708,10 +692,7 @@ where
 
 		// Subcall protection.
 		let allow_subcalls = C::allow_subcalls().unwrap_or(false);
-		let mut handle = RestrictiveHandle {
-			handle,
-			allow_subcalls,
-		};
+		let mut handle = RestrictiveHandle { handle, allow_subcalls };
 
 		let res = self.precompile_set.execute(&mut handle);
 
@@ -725,7 +706,7 @@ where
 					};
 
 					*recursion_level -= 1;
-				}
+				},
 				// We don't hold the borrow and are in single-threaded code, thus we should
 				// not be able to fail borrowing in nested calls.
 				Err(_) => return Some(Err(revert("Couldn't check precompile nesting"))),
@@ -740,10 +721,7 @@ where
 		if address.as_bytes().starts_with(A::get()) {
 			return self.precompile_set.is_precompile(address, gas);
 		}
-		IsPrecompileResult::Answer {
-			is_precompile: false,
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: false, extra_cost: 0 }
 	}
 
 	#[inline(always)]
@@ -805,10 +783,7 @@ where
 
 	#[inline(always)]
 	fn is_precompile(&self, address: H160, _gas: u64) -> IsPrecompileResult {
-		IsPrecompileResult::Answer {
-			is_precompile: address == A::get(),
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: address == A::get(), extra_cost: 0 }
 	}
 
 	#[inline(always)]
@@ -831,10 +806,7 @@ where
 impl<A> IsActivePrecompile for RevertPrecompile<A> {
 	#[inline(always)]
 	fn is_active_precompile(&self, _address: H160, _gas: u64) -> IsPrecompileResult {
-		IsPrecompileResult::Answer {
-			is_precompile: true,
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
 	}
 }
 
@@ -864,10 +836,7 @@ where
 
 	#[inline(always)]
 	fn is_precompile(&self, address: H160, _gas: u64) -> IsPrecompileResult {
-		IsPrecompileResult::Answer {
-			is_precompile: A::get().contains(&address),
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: A::get().contains(&address), extra_cost: 0 }
 	}
 
 	#[inline(always)]
@@ -893,10 +862,7 @@ where
 {
 	#[inline(always)]
 	fn is_active_precompile(&self, _address: H160, _gas: u64) -> IsPrecompileResult {
-		IsPrecompileResult::Answer {
-			is_precompile: false,
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: false, extra_cost: 0 }
 	}
 }
 
@@ -926,10 +892,7 @@ where
 
 	#[inline(always)]
 	fn is_precompile(&self, address: H160, _gas: u64) -> IsPrecompileResult {
-		IsPrecompileResult::Answer {
-			is_precompile: address == A::get(),
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: address == A::get(), extra_cost: 0 }
 	}
 
 	#[inline(always)]
@@ -952,10 +915,7 @@ where
 impl<A> IsActivePrecompile for RemovedPrecompileAt<A> {
 	#[inline(always)]
 	fn is_active_precompile(&self, _address: H160, _gas: u64) -> IsPrecompileResult {
-		IsPrecompileResult::Answer {
-			is_precompile: false,
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: false, extra_cost: 0 }
 	}
 }
 
@@ -997,10 +957,7 @@ impl PrecompileSetFragment for Tuple {
 				_ => {}
 			};
 		)*);
-		IsPrecompileResult::Answer {
-			is_precompile: false,
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: false, extra_cost: 0 }
 	}
 
 	#[inline(always)]
@@ -1043,10 +1000,7 @@ impl IsActivePrecompile for Tuple {
 				_ => {}
 			};
 		)*);
-		IsPrecompileResult::Answer {
-			is_precompile: false,
-			extra_cost: 0,
-		}
+		IsPrecompileResult::Answer { is_precompile: false, extra_cost: 0 }
 	}
 }
 
@@ -1087,10 +1041,7 @@ where
 		if self.range.contains(&address) {
 			self.inner.is_precompile(address, gas)
 		} else {
-			IsPrecompileResult::Answer {
-				is_precompile: false,
-				extra_cost: 0,
-			}
+			IsPrecompileResult::Answer { is_precompile: false, extra_cost: 0 }
 		}
 	}
 
@@ -1111,10 +1062,7 @@ where
 		if self.range.contains(&address) {
 			self.inner.is_active_precompile(address, gas)
 		} else {
-			IsPrecompileResult::Answer {
-				is_precompile: false,
-				extra_cost: 0,
-			}
+			IsPrecompileResult::Answer { is_precompile: false, extra_cost: 0 }
 		}
 	}
 }
@@ -1144,10 +1092,7 @@ impl<R, P: IsActivePrecompile> IsActivePrecompile for PrecompileSetBuilder<R, P>
 impl<R: pallet_evm::Config, P: PrecompileSetFragment> PrecompileSetBuilder<R, P> {
 	/// Create a new instance of the PrecompileSet.
 	pub fn new() -> Self {
-		Self {
-			inner: P::new(),
-			_phantom: PhantomData,
-		}
+		Self { inner: P::new(), _phantom: PhantomData }
 	}
 
 	/// Return the list of addresses contained in this PrecompileSet.

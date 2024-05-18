@@ -10,6 +10,10 @@ members = [
     "node",
     "pallets/template",
     "runtime",
+    "precompiles/pallet-template",
+    "precompiles/utils",
+	"precompiles/utils/macro",
+	"precompiles/utils/tests-external",
 ]
 resolver = "2"
 
@@ -178,3 +182,5 @@ xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-s
 # local
 pallet-template = { path = "pallets/template", default-features = false }
 canbus-runtime = { path = "runtime", default-features = false }
+precompile-utils = { path = "precompiles/utils", default-features = false }
+pallet-template-precompile = { path = "precompiles/pallet-template", default-features = false }

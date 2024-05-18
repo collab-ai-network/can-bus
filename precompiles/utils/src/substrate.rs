@@ -48,7 +48,7 @@ impl From<TryDispatchError> for PrecompileFailure {
 			TryDispatchError::Evm(e) => PrecompileFailure::Error { exit_status: e },
 			TryDispatchError::Substrate(e) => {
 				revert(alloc::format!("Dispatched call failed with error: {e:?}"))
-			}
+			},
 		}
 	}
 }
@@ -127,12 +127,8 @@ where
 		let post_dispatch_info = using_precompile_handle(handle, || call.dispatch(origin))
 			.map_err(|e| TryDispatchError::Substrate(e.error))?;
 
-		Self::refund_weight_v2_cost(
-			handle,
-			dispatch_info.weight,
-			post_dispatch_info.actual_weight,
-		)
-		.map_err(|e| TryDispatchError::Evm(e))?;
+		Self::refund_weight_v2_cost(handle, dispatch_info.weight, post_dispatch_info.actual_weight)
+			.map_err(|e| TryDispatchError::Evm(e))?;
 
 		Ok(post_dispatch_info)
 	}

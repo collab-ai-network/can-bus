@@ -127,10 +127,9 @@ mod tests {
 				},
 			) {
 				(ExitReason::Succeed(_), _) => Ok(()),
-				(ExitReason::Revert(_), v) => Err(PrecompileFailure::Revert {
-					exit_status: ExitRevert::Reverted,
-					output: v,
-				}),
+				(ExitReason::Revert(_), v) => {
+					Err(PrecompileFailure::Revert { exit_status: ExitRevert::Reverted, output: v })
+				},
 				_ => Err(revert("unexpected error")),
 			}
 		}
@@ -312,11 +311,7 @@ mod tests {
 	fn default_checks_revert_when_called_by_precompile() {
 		ExtBuilder::default().build().execute_with(|| {
 			precompiles()
-				.prepare_test(
-					H160::from_low_u64_be(1),
-					H160::from_low_u64_be(1),
-					PCall::success {},
-				)
+				.prepare_test(H160::from_low_u64_be(1), H160::from_low_u64_be(1), PCall::success {})
 				.with_subcall_handle(|Subcall { .. }| panic!("there should be no subcall"))
 				.execute_reverts(|r| r == b"Function not callable by precompiles")
 		})
@@ -366,11 +361,7 @@ mod tests {
 	fn callable_by_precompile_works() {
 		ExtBuilder::default().build().execute_with(|| {
 			precompiles()
-				.prepare_test(
-					H160::from_low_u64_be(3),
-					H160::from_low_u64_be(3),
-					PCall::success {},
-				)
+				.prepare_test(H160::from_low_u64_be(3), H160::from_low_u64_be(3), PCall::success {})
 				.with_subcall_handle(|Subcall { .. }| panic!("there should be no subcall"))
 				.execute_returns(())
 		})

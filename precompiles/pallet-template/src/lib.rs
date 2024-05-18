@@ -66,13 +66,10 @@ impl<Runtime> PalletTemplatePrecompile<Runtime> {
 #[precompile_utils::precompile]
 impl<Runtime> PalletTemplatePrecompile<Runtime>
 where
-	Runtime: pallet_template::Config + pallet_evm::Config
+	Runtime: pallet_template::Config + pallet_evm::Config,
 {
 	#[precompile::public("doSomething(u32)")]
-	fn do_something(
-		handle: &mut impl PrecompileHandle,
-		something: u32,
-	) -> EvmResult {
+	fn do_something(handle: &mut impl PrecompileHandle, something: u32) -> EvmResult {
 		Self::do_something_inner(handle, something)?;
 
 		// topic number = 1
@@ -84,23 +81,17 @@ where
 			SELECTOR_LOG_SOMETHING,
 			handle.context().caller,
 			solidity::encode_event_data(something),
-
 		)
 		.record(handle)?;
 	}
 
-	fn do_something_inner(
-		handle: &mut impl PrecompileHandle,
-		something: u32,
-	) -> EvmResult {
+	fn do_something_inner(handle: &mut impl PrecompileHandle, something: u32) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		RuntimeHelper::<Runtime>::try_dispatch(
 			handle,
 			Some(origin.clone()).into(),
-			pallet_template::Call::<Runtime>::do_something {
-				something,
-			},
+			pallet_template::Call::<Runtime>::do_something { something },
 			0, // Storage growth
 		)?;
 
@@ -108,10 +99,7 @@ where
 	}
 
 	#[precompile::public("causeError()")]
-	fn cause_error(
-		handle: &mut impl PrecompileHandle,
-	) -> EvmResult<bool> {
-
+	fn cause_error(handle: &mut impl PrecompileHandle) -> EvmResult<bool> {
 		// read a storage with type u32, 8 bytes
 		handle.record_db_read::<Runtime>(8)?;
 
