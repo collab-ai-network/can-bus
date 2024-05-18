@@ -177,10 +177,9 @@ pallet-evm-precompile-simple = { git = "https://github.com/polkadot-evm/frontier
 # Utils
 evm = { git = "https://github.com/moonbeam-foundation/evm", branch = "moonbeam-polkadot-v1.3.0", default-features = false }
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
-
+precompile-utils = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.38.0", default-features = false }
 
 # local
 pallet-template = { path = "pallets/template", default-features = false }
 canbus-runtime = { path = "runtime", default-features = false }
-precompile-utils = { path = "precompiles/utils", default-features = false }
 pallet-template-precompile = { path = "precompiles/pallet-template", default-features = false }
