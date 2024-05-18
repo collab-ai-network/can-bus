@@ -16,23 +16,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use fp_evm::PrecompileHandle;
 
-use fp_evm::{PrecompileHandle};
-
-
+use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use frame_support::traits::{Get, OriginTrait};
-use frame_support::{
-	dispatch::{GetDispatchInfo, PostDispatchInfo},
-};
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
-use sp_runtime::traits::{Dispatchable};
+use sp_runtime::traits::Dispatchable;
 
-
-use sp_core::{H160};
-use sp_std::{
-	marker::PhantomData,
-};
+use sp_core::H160;
+use sp_std::marker::PhantomData;
 
 /// Solidity selector of the pallet template log, which is the Keccak of the Log signature.
 /// Maybe we can omit the event since substrate will also have one?
@@ -64,7 +57,7 @@ where
 	Runtime: pallet_template::Config + pallet_evm::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_template::Call<Runtime>>,
-    <Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	Runtime::AccountId: Into<H160>,
 {
 	#[precompile::public("doSomething(u32)")]
