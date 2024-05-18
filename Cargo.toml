@@ -176,7 +176,7 @@ pallet-evm-precompile-simple = { git = "https://github.com/polkadot-evm/frontier
 
 # Utils
 evm = { git = "https://github.com/moonbeam-foundation/evm", branch = "moonbeam-polkadot-v1.3.0", default-features = false }
-xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "moonbeam-polkadot-v1.3.0", default-features = false }
+xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "polkadot-v1.3.0", default-features = false }
 
 
 # local
