@@ -1,5 +1,10 @@
-use crate as pallet_halving_mint;
-use frame_support::{derive_impl, parameter_types, traits::ConstU64, PalletId};
+use crate::{self as pallet_halving_mint, OnTokenMinted};
+use frame_support::{
+	derive_impl, parameter_types,
+	traits::{ConstU64, Currency, ExistenceRequirement, Hooks},
+	weights::Weight,
+	PalletId,
+};
 use sp_core::ConstU32;
 use sp_runtime::BuildStorage;
 
@@ -21,7 +26,7 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 1;
+	pub const ExistentialDeposit: u64 = 2;
 	pub const MaxLocks: u32 = 10;
 }
 
@@ -53,7 +58,7 @@ impl pallet_halving_mint::Config for Test {
 	type TotalIssuance = ConstU64<1000>;
 	type HalvingInterval = ConstU32<10>;
 	type BeneficiaryId = BeneficiaryId;
-	type OnTokenMinted = ();
+	type OnTokenMinted = TransferOnTokenMinted<Test>;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -61,6 +66,30 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		frame_system::GenesisConfig::<Test>::default().build_storage().unwrap().into();
 	ext.execute_with(|| {
 		System::set_block_number(1);
+		let _ = Balances::deposit_creating(&HalvingMint::beneficiary_account(), 10);
 	});
 	ext
+}
+
+pub fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		if System::block_number() > 1 {
+			System::on_finalize(System::block_number());
+		}
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		HalvingMint::on_initialize(System::block_number());
+	}
+}
+
+pub struct TransferOnTokenMinted<T>(sp_std::marker::PhantomData<T>);
+
+impl<T> OnTokenMinted<T::AccountId, T::Balance> for TransferOnTokenMinted<T>
+where
+	T: frame_system::Config<AccountId = u64> + pallet_balances::Config<Balance = u64>,
+{
+	fn token_minted(beneficiary: T::AccountId, amount: T::Balance) -> Weight {
+		let _ = Balances::transfer(&beneficiary, &1, amount, ExistenceRequirement::AllowDeath);
+		Weight::zero()
+	}
 }

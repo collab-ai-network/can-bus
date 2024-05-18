@@ -1,5 +1,5 @@
 use canbus_runtime::{
-	AccountId, AuraConfig, Balance, BalancesConfig, EVMChainIdConfig, GrandpaConfig,
+	AccountId, AuraConfig, Balance, BalancesConfig, EVMChainIdConfig, GrandpaConfig, HavlingMintId,
 	RuntimeGenesisConfig, Signature, SudoConfig, SystemConfig, UNIT, WASM_BINARY,
 };
 use sc_chain_spec::Properties;
@@ -21,7 +21,7 @@ pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Pu
 		.public()
 }
 
-const DEFAULT_ENDOWED_ACCOUNT_BALANCE: Balance = 1000 * UNIT;
+const DEFAULT_ENDOWED_ACCOUNT_BALANCE: Balance = 100 * UNIT;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -66,6 +66,7 @@ pub fn chain_spec_dev() -> Result<ChainSpec, String> {
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					HavlingMintId.into_account_truncating(),
 				],
 				true,
 			)
@@ -117,5 +118,6 @@ fn build_genesis(
 		ethereum: Default::default(),
 		evm: Default::default(),
 		base_fee: Default::default(),
+		halving_mint: Default::default(),
 	}
 }

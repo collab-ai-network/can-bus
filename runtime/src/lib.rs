@@ -31,7 +31,6 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use frame_support::genesis_builder_helper::{build_config, create_default_config};
-// A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{
@@ -44,7 +43,7 @@ pub use frame_support::{
 		},
 		IdentityFee, Weight,
 	},
-	ConsensusEngineId, StorageValue,
+	ConsensusEngineId, PalletId, StorageValue,
 };
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
@@ -148,6 +147,8 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
+// 365.25 DAYS = 8766 HOURS
+pub const YEARS: BlockNumber = HOURS * 8766;
 
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
@@ -380,10 +381,20 @@ impl pallet_base_fee::Config for Runtime {
 	type DefaultElasticity = DefaultElasticity;
 }
 
-/// Configure the pallet-template in pallets/template.
-impl pallet_template::Config for Runtime {
+parameter_types! {
+	pub const HavlingMintId: PalletId = PalletId(*b"can/hlvm");
+	pub const TotalIssuance: u128 = 21_000_000 * UNIT;
+	pub const HalvingInterval: u32 = 5 * YEARS;
+}
+
+impl pallet_halving_mint::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
+	type Currency = Balances;
+	type ManagerOrigin = frame_system::EnsureRoot<u64>;
+	type TotalIssuance = ConstU128<TotalIssuance>;
+	type HalvingInterval = ConstU32<HalvingInterval>;
+	type BeneficiaryId = HavlingMintId;
+	type OnTokenMinted = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -400,7 +411,7 @@ construct_runtime!(
 		EVM: pallet_evm = 8,
 		EVMChainId: pallet_evm_chain_id = 9,
 		BaseFee: pallet_base_fee = 10,
-		TemplateModule: pallet_template = 11,
+		HalvingMint: pallet_halving_mint = 11,
 	}
 );
 

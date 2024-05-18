@@ -82,6 +82,7 @@ pub mod pallet {
 		MintStateUnchanged,
 		MintAlreadyStarted,
 		MintNotStarted,
+		StartBlockTooEarly,
 	}
 
 	#[pallet::storage]
@@ -123,7 +124,6 @@ pub mod pallet {
 					// 2 reads: `enabled`, `start_block`
 					weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
 
-					// should not happen but a sanity check
 					if now < start_block {
 						return weight;
 					}
@@ -177,26 +177,40 @@ pub mod pallet {
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn set_enabled(origin: OriginFor<T>, enabled: bool) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
+			ensure!(StartBlock::<T>::get().is_some(), Error::<T>::MintNotStarted);
 			ensure!(enabled != Self::enabled(), Error::<T>::MintStateUnchanged);
 			Enabled::<T>::put(enabled);
 			Self::deposit_event(Event::MintStateChanged { enabled });
 			Ok(Pays::No.into())
 		}
 
+		/// Start mint from next block, this is the earliest block the next minting can happen,
+		/// as we already missed the intialization of current block and we don't do retroactive
+		/// minting
 		#[pallet::call_index(1)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
-		pub fn start_mint(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn start_mint_from_next_block(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			Self::start_mint_from_block(
+				origin,
+				frame_system::Pallet::<T>::block_number() + BlockNumberFor::<T>::one(),
+			)
+		}
+
+		/// Start mint from a given block that is larger than the current block number
+		#[pallet::call_index(2)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn start_mint_from_block(
+			origin: OriginFor<T>,
+			start_block: BlockNumberFor<T>,
+		) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
 			ensure!(StartBlock::<T>::get().is_none(), Error::<T>::MintAlreadyStarted);
-			let start_block = frame_system::Pallet::<T>::block_number();
+			ensure!(
+				start_block > frame_system::Pallet::<T>::block_number(),
+				Error::<T>::StartBlockTooEarly
+			);
 			Enabled::<T>::put(true);
 			StartBlock::<T>::put(start_block);
-
-			// set the beneficiary account as self-sufficient to not get reaped even provider and
-			// consumer rc is 0 TODO: where to dec_sufficients?
-			if frame_system::Pallet::<T>::sufficients(&Self::beneficiary_account()) == 0 {
-				frame_system::Pallet::<T>::inc_sufficients(&Self::beneficiary_account());
-			}
 			Self::deposit_event(Event::MintStarted { start_block });
 			Ok(Pays::No.into())
 		}
