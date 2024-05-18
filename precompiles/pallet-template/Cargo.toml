@@ -1,0 +1,68 @@
+[package]
+name = "pallet-template-precompile"
+description = "A Precompile to show the standard of precompile implementation."
+version = "0.0.0"
+license = "MIT-0"
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+log = { workspace = true }
+num_enum = { workspace = true }
+paste = { workspace = true }
+
+# Moonbeam
+precompile-utils = { workspace = true }
+
+# Substrate
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-timestamp = { workspace = true }
+codec = { workspace = true, features = [ "max-encoded-len" ] }
+scale-info = { workspace = true, features = [ "derive" ] }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+# Frontier
+fp-evm = { workspace = true }
+pallet-evm = { workspace = true, features = [ "forbid-evm-reentrancy" ] }
+
+[dev-dependencies]
+derive_more = { workspace = true }
+hex-literal = { workspace = true }
+libsecp256k1 = { workspace = true }
+serde = { workspace = true }
+sha3 = { workspace = true }
+
+# Moonbeam
+precompile-utils = { workspace = true, features = [ "std", "testing" ] }
+
+pallet-timestamp = { workspace = true, features = [ "std" ] }
+codec = { workspace = true, features = [ "max-encoded-len", "std" ] }
+scale-info = { workspace = true, features = [ "derive" ] }
+sp-runtime = { workspace = true, features = [ "std" ] }
+
+[features]
+default = [ "std" ]
+std = [
+	"fp-evm/std",
+	"frame-support/std",
+	"frame-system/std",
+	"pallet-assets/std",
+	"pallet-balances/std",
+	"pallet-evm/std",
+	"pallet-timestamp/std",
+	"codec/std",
+	"precompile-utils/std",
+	"sp-core/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"sp-std/std",
+]
