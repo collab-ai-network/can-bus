@@ -16,26 +16,21 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::fmt::Display;
-use fp_evm::{ExitError, PrecompileHandle};
-use frame_support::traits::fungibles::Inspect;
-use frame_support::traits::fungibles::{
-	approvals::Inspect as ApprovalInspect, metadata::Inspect as MetadataInspect,
-	roles::Inspect as RolesInspect,
-};
+
+use fp_evm::{PrecompileHandle};
+
+
 use frame_support::traits::{Get, OriginTrait};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
-	sp_runtime::traits::StaticLookup,
 };
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
-use sp_runtime::traits::{Bounded, Dispatchable};
-use sp_std::vec::Vec;
+use sp_runtime::traits::{Dispatchable};
 
-use sp_core::{MaxEncodedLen, H160, H256, U256};
+
+use sp_core::{H160};
 use sp_std::{
-	convert::{TryFrom, TryInto},
 	marker::PhantomData,
 };
 
@@ -67,22 +62,28 @@ impl<Runtime> PalletTemplatePrecompile<Runtime> {
 impl<Runtime> PalletTemplatePrecompile<Runtime>
 where
 	Runtime: pallet_template::Config + pallet_evm::Config,
+	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
+	Runtime::RuntimeCall: From<pallet_template::Call<Runtime>>,
+    <Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+	Runtime::AccountId: Into<H160>,
 {
 	#[precompile::public("doSomething(u32)")]
 	fn do_something(handle: &mut impl PrecompileHandle, something: u32) -> EvmResult {
 		Self::do_something_inner(handle, something)?;
 
-		// topic number = 1
+		// topic number = 2 including Topic 0
 		// data length => u32 = 4 bytes
-		handle.record_log_costs_manual(1, 4)?;
-		// one indexing topic, so log1
-		log1(
+		handle.record_log_costs_manual(2, 4)?;
+		// one indexing topic + Topic 0, so log2
+		log2(
 			handle.context().address,
 			SELECTOR_LOG_SOMETHING,
 			handle.context().caller,
 			solidity::encode_event_data(something),
 		)
 		.record(handle)?;
+
+		Ok(())
 	}
 
 	fn do_something_inner(handle: &mut impl PrecompileHandle, something: u32) -> EvmResult {
@@ -92,14 +93,13 @@ where
 			handle,
 			Some(origin.clone()).into(),
 			pallet_template::Call::<Runtime>::do_something { something },
-			0, // Storage growth
 		)?;
 
 		Ok(())
 	}
 
 	#[precompile::public("causeError()")]
-	fn cause_error(handle: &mut impl PrecompileHandle) -> EvmResult<bool> {
+	fn cause_error(handle: &mut impl PrecompileHandle) -> EvmResult {
 		// read a storage with type u32, 8 bytes
 		handle.record_db_read::<Runtime>(8)?;
 
@@ -109,7 +109,6 @@ where
 			handle,
 			Some(origin.clone()).into(),
 			pallet_template::Call::<Runtime>::cause_error {},
-			0, // Storage growth
 		)?;
 
 		Ok(())

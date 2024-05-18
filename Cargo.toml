@@ -10,7 +10,7 @@ members = [
     "node",
     "pallets/template",
     "runtime",
-    "precompiles/pallet-template",
+    "precompiles/*",
 ]
 resolver = "2"
 
@@ -77,6 +77,7 @@ quote = { version = "1.0" }
 syn = { version = "1.0", features = [ "extra-traits", "fold", "full", "visit" ] }
 macrotest = { version = "1.0.9" }
 trybuild = { version = "1.0" }
+evm = { version = "0.41.1", default-features = false }
 
 # substrate client
 sc-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0" }
@@ -104,6 +105,7 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-s
 
 # wasm
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
+sp-core-hashing = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 sp-consensus-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
@@ -170,11 +172,10 @@ pallet-evm-precompile-ed25519 = { git = "https://github.com/polkadot-evm/frontie
 pallet-evm-precompile-modexp = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
 pallet-evm-precompile-sha3fips = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
 pallet-evm-precompile-simple = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
+precompile-utils = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
 
 # Utils
-evm = { git = "https://github.com/moonbeam-foundation/evm", branch = "moonbeam-polkadot-v1.3.0", default-features = false }
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
-precompile-utils = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.38.0", default-features = false }
 
 # local
 pallet-template = { path = "pallets/template", default-features = false }
