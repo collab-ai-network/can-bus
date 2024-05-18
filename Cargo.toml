@@ -11,9 +11,6 @@ members = [
     "pallets/template",
     "runtime",
     "precompiles/pallet-template",
-    "precompiles/utils",
-	"precompiles/utils/macro",
-	"precompiles/utils/tests-external",
 ]
 resolver = "2"
 
