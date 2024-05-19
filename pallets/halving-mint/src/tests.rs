@@ -1,23 +1,27 @@
-use crate::{mock::*, Error, Event};
+use crate::{mock::*, Error, Event, State};
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
-fn set_enabled_works() {
+fn set_mint_state_check_works() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(HalvingMint::enabled(), false);
+		assert_eq!(HalvingMint::mint_state(), State::Stopped);
 		assert_noop!(
-			HalvingMint::set_enabled(RuntimeOrigin::signed(1), true),
+			HalvingMint::set_mint_state(RuntimeOrigin::signed(1), State::Running),
 			sp_runtime::DispatchError::BadOrigin,
 		);
 		assert_noop!(
-			HalvingMint::set_enabled(RuntimeOrigin::root(), true),
+			HalvingMint::set_mint_state(RuntimeOrigin::root(), State::Running),
 			Error::<Test>::MintNotStarted,
 		);
 		assert_ok!(HalvingMint::start_mint_from_next_block(RuntimeOrigin::root()));
-		assert_eq!(HalvingMint::enabled(), true);
-		assert_ok!(HalvingMint::set_enabled(RuntimeOrigin::root(), false));
-		assert_eq!(HalvingMint::enabled(), false);
-		System::assert_last_event(Event::MintStateChanged { enabled: false }.into());
+		assert_eq!(HalvingMint::mint_state(), State::Running);
+		assert_noop!(
+			HalvingMint::set_mint_state(RuntimeOrigin::root(), State::Running),
+			Error::<Test>::MintStateUnchanged,
+		);
+		assert_ok!(HalvingMint::set_mint_state(RuntimeOrigin::root(), State::Stopped));
+		assert_eq!(HalvingMint::mint_state(), State::Stopped);
+		System::assert_last_event(Event::MintStateChanged { new_state: State::Stopped }.into());
 	});
 }
 
@@ -92,5 +96,74 @@ fn halving_mint_works() {
 		assert_eq!(Balances::total_issuance(), 980);
 		assert_eq!(Balances::free_balance(&beneficiary), 10);
 		assert_eq!(Balances::free_balance(&1), 970);
+	});
+}
+
+#[test]
+fn set_on_token_minted_state_works() {
+	new_test_ext().execute_with(|| {
+		let beneficiary = HalvingMint::beneficiary_account();
+
+		assert_ok!(HalvingMint::start_mint_from_next_block(RuntimeOrigin::root()));
+		assert_ok!(HalvingMint::set_on_token_minted_state(RuntimeOrigin::root(), State::Stopped));
+		System::assert_last_event(
+			Event::OnTokenMintedStateChanged { new_state: State::Stopped }.into(),
+		);
+
+		run_to_block(2);
+		// 50 tokens are minted, but none is transferred away
+		assert_eq!(Balances::total_issuance(), 60);
+		assert_eq!(Balances::free_balance(&beneficiary), 60);
+		assert_eq!(Balances::free_balance(&1), 0);
+
+		run_to_block(10);
+		assert_ok!(HalvingMint::set_on_token_minted_state(RuntimeOrigin::root(), State::Running));
+		System::assert_last_event(
+			Event::OnTokenMintedStateChanged { new_state: State::Running }.into(),
+		);
+
+		run_to_block(11);
+		// start to transfer token
+		assert_eq!(Balances::total_issuance(), 510);
+		assert_eq!(Balances::free_balance(&beneficiary), 460);
+		assert_eq!(Balances::free_balance(&1), 50);
+	});
+}
+
+#[test]
+fn set_mint_state_works() {
+	new_test_ext().execute_with(|| {
+		let beneficiary = HalvingMint::beneficiary_account();
+
+		assert_ok!(HalvingMint::start_mint_from_next_block(RuntimeOrigin::root()));
+
+		run_to_block(2);
+		assert_eq!(Balances::total_issuance(), 60);
+		assert_eq!(Balances::free_balance(&beneficiary), 10);
+		assert_eq!(Balances::free_balance(&1), 50);
+		// stop the minting
+		assert_ok!(HalvingMint::set_mint_state(RuntimeOrigin::root(), State::Stopped));
+
+		run_to_block(3);
+		// no new tokens should be minted
+		assert_eq!(Balances::total_issuance(), 60);
+		assert_eq!(Balances::free_balance(&beneficiary), 10);
+		assert_eq!(Balances::free_balance(&1), 50);
+
+		run_to_block(4);
+		// resume the minting
+		assert_ok!(HalvingMint::set_mint_state(RuntimeOrigin::root(), State::Running));
+
+		run_to_block(5);
+		assert_eq!(Balances::total_issuance(), 110);
+		assert_eq!(Balances::free_balance(&beneficiary), 10);
+		assert_eq!(Balances::free_balance(&1), 100);
+		assert_eq!(HalvingMint::skipped_blocks(), 2);
+
+		// the first halving should be delayed to block 14
+		run_to_block(14);
+		assert_eq!(Balances::total_issuance(), 535);
+		assert_eq!(Balances::free_balance(&beneficiary), 10);
+		assert_eq!(Balances::free_balance(&1), 525);
 	});
 }

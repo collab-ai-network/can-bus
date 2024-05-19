@@ -17,8 +17,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
 
+use codec::{Decode, Encode};
 use frame_support::traits::Currency;
 pub use pallet::*;
+use scale_info::TypeInfo;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod mock;
@@ -32,6 +36,17 @@ pub use traits::OnTokenMinted;
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+/// an on/off flag, used in both `MintState` and `OnTokenMintedState`
+#[derive(PartialEq, Eq, Clone, Copy, Default, Encode, Decode, Debug, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum State {
+	#[default]
+	#[codec(index = 0)]
+	Stopped,
+	#[codec(index = 1)]
+	Running,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -41,7 +56,10 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::{BlockNumberFor, *};
-	use sp_runtime::traits::{AccountIdConversion, One, Zero};
+	use sp_runtime::{
+		traits::{AccountIdConversion, One, Zero},
+		Saturating,
+	};
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
@@ -73,7 +91,8 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		MintStateChanged { enabled: bool },
+		MintStateChanged { new_state: State },
+		OnTokenMintedStateChanged { new_state: State },
 		MintStarted { start_block: BlockNumberFor<T> },
 		Minted { to: T::AccountId, amount: BalanceOf<T> },
 	}
@@ -81,35 +100,55 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		MintStateUnchanged,
+		OnTokenMintedStateUnchanged,
 		MintAlreadyStarted,
 		MintNotStarted,
 		StartBlockTooEarly,
+		SkippedBlocksOverflow,
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn enabled)]
-	pub type Enabled<T: Config> = StorageValue<_, bool, ValueQuery>;
+	#[pallet::getter(fn mint_state)]
+	pub type MintState<T: Config> = StorageValue<_, State, ValueQuery>;
 
+	/// If the `OnTokenMinted` callback is stopped or not
+	#[pallet::storage]
+	#[pallet::getter(fn on_token_minted_state)]
+	pub type OnTokenMintedState<T: Config> = StorageValue<_, State, ValueQuery>;
+
+	/// the block number from which the minting is started, `None` means minting
+	/// is not started yet
 	#[pallet::storage]
 	#[pallet::getter(fn start_block)]
 	pub type StartBlock<T: Config> = StorageValue<_, BlockNumberFor<T>, OptionQuery>;
 
+	/// Number of skipped blocks being counted when `MintState` is `Stopped`
+	#[pallet::storage]
+	#[pallet::getter(fn skipped_blocks)]
+	pub type SkippedBlocks<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub enabled: bool,
+		pub mint_state: State,
+		pub on_token_minted_state: State,
 		pub start_block: Option<BlockNumberFor<T>>,
 	}
 
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { enabled: false, start_block: None }
+			Self {
+				mint_state: State::Stopped,
+				on_token_minted_state: State::Stopped,
+				start_block: None,
+			}
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			Enabled::<T>::put(self.enabled);
+			MintState::<T>::put(self.mint_state);
+			OnTokenMintedState::<T>::put(self.on_token_minted_state);
 			if let Some(n) = self.start_block {
 				StartBlock::<T>::put(n);
 			}
@@ -120,12 +159,13 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(now: BlockNumberFor<T>) -> Weight {
 			let mut weight = Weight::zero();
-			if Self::enabled() {
-				if let Some(start_block) = Self::start_block() {
-					// 2 reads: `enabled`, `start_block`
-					weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
+			if let Some(start_block) = Self::start_block() {
+				if Self::mint_state() == State::Running {
+					let skipped_blocks = Self::skipped_blocks();
+					// 3 reads: `mint_state`, `start_block`, `skipped_blocks`
+					weight = weight.saturating_add(T::DbWeight::get().reads_writes(3, 0));
 
-					if now < start_block {
+					if now < start_block.saturating_add(skipped_blocks) {
 						return weight;
 					}
 
@@ -134,7 +174,8 @@ pub mod pallet {
 					// calculate the amount of initially minted tokens before first halving
 					let mut minted = T::TotalIssuance::get() / (halving_interval * 2).into();
 					// halving round index
-					let halving_round = (now - start_block) / halving_interval.into();
+					let halving_round = (now - start_block.saturating_add(skipped_blocks)) /
+						halving_interval.into();
 					// beneficiary account
 					let to = Self::beneficiary_account();
 
@@ -165,7 +206,18 @@ pub mod pallet {
 					// minted and accumulated.
 					let _ = T::Currency::deposit_creating(&to, minted);
 					Self::deposit_event(Event::Minted { to: to.clone(), amount: minted });
-					weight = weight.saturating_add(T::OnTokenMinted::token_minted(to, minted));
+					if Self::on_token_minted_state() == State::Running {
+						weight = weight.saturating_add(T::OnTokenMinted::token_minted(to, minted));
+					}
+					// 1 read: `on_token_minted_state`
+					weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+				} else {
+					// we should have minted tokens but it's forcibly stopped
+					let skipped_blocks =
+						Self::skipped_blocks().saturating_add(BlockNumberFor::<T>::one());
+					SkippedBlocks::<T>::put(skipped_blocks);
+					// 1 read, 1 write: `SkippedBlocks`
+					weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 				}
 			}
 			weight
@@ -177,21 +229,39 @@ pub mod pallet {
 	// and should only be called once or very few times.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Set the state of the minting, it essentially "pause" and "resume" the minting process.
 		#[pallet::call_index(0)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
-		pub fn set_enabled(origin: OriginFor<T>, enabled: bool) -> DispatchResultWithPostInfo {
+		pub fn set_mint_state(origin: OriginFor<T>, state: State) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
 			ensure!(StartBlock::<T>::get().is_some(), Error::<T>::MintNotStarted);
-			ensure!(enabled != Self::enabled(), Error::<T>::MintStateUnchanged);
-			Enabled::<T>::put(enabled);
-			Self::deposit_event(Event::MintStateChanged { enabled });
+			ensure!(state != Self::mint_state(), Error::<T>::MintStateUnchanged);
+			MintState::<T>::put(state);
+			Self::deposit_event(Event::MintStateChanged { new_state: state });
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn set_on_token_minted_state(
+			origin: OriginFor<T>,
+			state: State,
+		) -> DispatchResultWithPostInfo {
+			T::ManagerOrigin::ensure_origin(origin)?;
+			ensure!(StartBlock::<T>::get().is_some(), Error::<T>::MintNotStarted);
+			ensure!(
+				state != Self::on_token_minted_state(),
+				Error::<T>::OnTokenMintedStateUnchanged
+			);
+			OnTokenMintedState::<T>::put(state);
+			Self::deposit_event(Event::OnTokenMintedStateChanged { new_state: state });
 			Ok(Pays::No.into())
 		}
 
 		/// Start mint from next block, this is the earliest block the next minting can happen,
 		/// as we already missed the intialization of current block and we don't do retroactive
 		/// minting
-		#[pallet::call_index(1)]
+		#[pallet::call_index(2)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn start_mint_from_next_block(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			Self::start_mint_from_block(
@@ -201,7 +271,7 @@ pub mod pallet {
 		}
 
 		/// Start mint from a given block that is larger than the current block number
-		#[pallet::call_index(2)]
+		#[pallet::call_index(3)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn start_mint_from_block(
 			origin: OriginFor<T>,
@@ -213,7 +283,8 @@ pub mod pallet {
 				start_block > frame_system::Pallet::<T>::block_number(),
 				Error::<T>::StartBlockTooEarly
 			);
-			Enabled::<T>::put(true);
+			MintState::<T>::put(State::Running);
+			OnTokenMintedState::<T>::put(State::Running);
 			StartBlock::<T>::put(start_block);
 			Self::deposit_event(Event::MintStarted { start_block });
 			Ok(Pays::No.into())
