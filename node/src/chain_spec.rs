@@ -1,5 +1,5 @@
 use canbus_runtime::{
-	AccountId, AuraConfig, Balance, BalancesConfig, EVMChainIdConfig, GrandpaConfig, HavlingMintId,
+	AccountId, AuraConfig, Balance, BalancesConfig, EVMChainIdConfig, GrandpaConfig, HalvingMint,
 	RuntimeGenesisConfig, Signature, SudoConfig, SystemConfig, UNIT, WASM_BINARY,
 };
 use sc_chain_spec::Properties;
@@ -66,7 +66,7 @@ pub fn chain_spec_dev() -> Result<ChainSpec, String> {
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					HavlingMintId.into_account_truncating(),
+					HalvingMint::beneficiary_account(),
 				],
 				true,
 			)

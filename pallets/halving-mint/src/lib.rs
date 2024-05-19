@@ -75,6 +75,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		MintStateChanged { enabled: bool },
 		MintStarted { start_block: BlockNumberFor<T> },
+		Minted { to: T::AccountId, amount: BalanceOf<T> },
 	}
 
 	#[pallet::error]
@@ -134,6 +135,8 @@ pub mod pallet {
 					let mut minted = T::TotalIssuance::get() / (halving_interval * 2).into();
 					// halving round index
 					let halving_round = (now - start_block) / halving_interval.into();
+					// beneficiary account
+					let to = Self::beneficiary_account();
 
 					// 2 reads: `total_issuance`, `halving_interval`
 					weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
@@ -160,17 +163,18 @@ pub mod pallet {
 					//
 					// Also imagine there's no callback impl, in this case the tokens will still be
 					// minted and accumulated.
-					let _ = T::Currency::deposit_creating(&Self::beneficiary_account(), minted);
-					weight = weight.saturating_add(T::OnTokenMinted::token_minted(
-						Self::beneficiary_account(),
-						minted,
-					));
+					let _ = T::Currency::deposit_creating(&to, minted);
+					Self::deposit_event(Event::Minted { to: to.clone(), amount: minted });
+					weight = weight.saturating_add(T::OnTokenMinted::token_minted(to, minted));
 				}
 			}
 			weight
 		}
 	}
 
+	// TODO: benchmarking and WeightInfo
+	// IMO it's not **that** bad to use constant weight for extrinsics now as they are simple calls
+	// and should only be called once or very few times.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]

@@ -383,16 +383,14 @@ impl pallet_base_fee::Config for Runtime {
 
 parameter_types! {
 	pub const HavlingMintId: PalletId = PalletId(*b"can/hlvm");
-	pub const TotalIssuance: u128 = 21_000_000 * UNIT;
-	pub const HalvingInterval: u32 = 5 * YEARS;
 }
 
-impl pallet_halving_mint::Config for Test {
+impl pallet_halving_mint::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type ManagerOrigin = frame_system::EnsureRoot<u64>;
-	type TotalIssuance = ConstU128<TotalIssuance>;
-	type HalvingInterval = ConstU32<HalvingInterval>;
+	type ManagerOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type TotalIssuance = ConstU128<{ 21_000_000 * UNIT }>;
+	type HalvingInterval = ConstU32<{ 5 * YEARS }>;
 	type BeneficiaryId = HavlingMintId;
 	type OnTokenMinted = ();
 }
@@ -544,7 +542,6 @@ mod benches {
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
 		[pallet_sudo, Sudo]
-		[pallet_template, TemplateModule]
 	);
 }
 
@@ -930,6 +927,7 @@ impl_runtime_apis! {
 			(list, storage_info)
 		}
 
+		#[allow(non_local_definitions)]
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
