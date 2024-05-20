@@ -37,8 +37,9 @@ pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// an on/off flag, used in both `MintState` and `OnTokenMintedState`
-#[derive(PartialEq, Eq, Clone, Copy, Default, Encode, Decode, Debug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(
+	PartialEq, Eq, Clone, Copy, Default, Serialize, Deserialize, Encode, Decode, Debug, TypeInfo,
+)]
 pub enum State {
 	#[default]
 	#[codec(index = 0)]
