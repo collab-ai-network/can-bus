@@ -47,6 +47,7 @@ pub use frame_support::{
 	ConsensusEngineId, StorageValue,
 };
 pub use frame_system::Call as SystemCall;
+use frame_system::EnsureRoot;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
@@ -396,6 +397,53 @@ impl pallet_template::Config for Runtime {
 	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types!{
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/bridge");
+	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl pallet_bridge::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type BridgeCommitteeOrigin = EnsureRoot;
+	type Proposal = RuntimeCall;
+	type BridgeChainId = BridgeChainId;
+	type Currency = Balances;
+	type ProposalLifetime = ProposalLifetime;
+	type TreasuryAccount = TreasuryAccount;
+	type WeightInfo = weights::pallet_bridge::WeightInfo<Runtime>;
+}
+
+// allow anyone to call transfer_native
+pub struct TransferNativeAnyone;
+impl SortedMembers<AccountId> for TransferNativeAnyone {
+	fn sorted_members() -> Vec<AccountId> {
+		vec![]
+	}
+
+	fn contains(_who: &AccountId) -> bool {
+		true
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(_: &AccountId) {
+		unimplemented!()
+	}
+}
+
+impl pallet_assets_handler::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type BridgeCommitteeOrigin = EnsureRoot;
+	type TreasuryAccount = TreasuryAccount;
+}
+
+impl pallet_bridge_transfer::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type BridgeOrigin = pallet_bridge::EnsureBridge<Runtime>;
+	type TransferNativeMembers = TransferNativeAnyone;
+	type BridgeHandler = AssetsHandler;
+	type WeightInfo = weights::pallet_bridge_transfer::WeightInfo<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime {
@@ -412,6 +460,10 @@ construct_runtime!(
 		BaseFee: pallet_base_fee = 10,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template = 11,
+		ChainBridge: pallet_bridge = 12,
+		AssetsHandler: pallet_assets_handler = 13,
+		BridgeTransfer: pallet_bridge_transfer = 14,
+
 	}
 );
 

@@ -155,5 +155,8 @@ pallet-evm-precompile-sha3fips = { git = "https://github.com/polkadot-evm/fronti
 pallet-evm-precompile-simple = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
 
 # local
+pallet-assets-handler = { path = "pallets/pallet-assets-handler", default-features = false }
+pallet-bridge = { path = "pallets/bridge", default-features = false }
+pallet-bridge-transfer = { path = "pallets/bridge-transfer", default-features = false }
 pallet-template = { path = "pallets/template", default-features = false }
 canbus-runtime = { path = "runtime", default-features = false }
