@@ -77,6 +77,8 @@ pub type Signature = MultiSignature;
 /// to the public key of our transaction signing scheme.
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
+pub type AssetId = u128;
+
 /// Balance of an account.
 pub type Balance = u128;
 
@@ -397,7 +399,40 @@ impl pallet_template::Config for Runtime {
 	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types!{
+parameter_types! {
+	pub const AssetDeposit: Balance = 1_000_000_000_000_000_000;
+	pub const AssetsStringLimit: u32 = 50;
+	/// Key = 32 bytes, Value = 36 bytes (32+1+1+1+1)
+	// https://github.com/paritytech/substrate/blob/069917b/frame/assets/src/lib.rs#L257L271
+	pub const MetadataDepositBase: Balance = deposit(1, 68);
+	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
+	pub const AssetAccountDeposit: Balance = deposit(1, 18);
+}
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type AssetAccountDeposit = AssetAccountDeposit;
+	type ApprovalDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
+	type StringLimit = AssetsStringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = weights::pallet_assets::SubstrateWeight<Runtime>;
+	type RemoveItemsLimit = ConstU32<1000>;
+	type AssetIdParameter = Compact<AssetId>;
+	type CallbackHandle = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = astar_primitives::benchmarks::AssetsBenchmarkHelper;
+}
+
+parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/bridge");
 	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
@@ -459,10 +494,11 @@ construct_runtime!(
 		EVMChainId: pallet_evm_chain_id = 9,
 		BaseFee: pallet_base_fee = 10,
 		// Include the custom logic from the pallet-template in the runtime.
-		TemplateModule: pallet_template = 11,
+		Assets: pallet_assets = 11,
 		ChainBridge: pallet_bridge = 12,
 		AssetsHandler: pallet_assets_handler = 13,
 		BridgeTransfer: pallet_bridge_transfer = 14,
+		TemplateModule: pallet_template = 15,
 
 	}
 );
