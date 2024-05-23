@@ -33,6 +33,7 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
 	use crate::weights::WeightInfo;
+	use codec::{Decode, Encode, EncodeLike};
 	use frame_support::{
 		dispatch::GetDispatchInfo,
 		traits::{fungible::Mutate, Currency, ExistenceRequirement::AllowDeath, WithdrawReasons},
@@ -42,7 +43,6 @@ pub mod pallet {
 		pallet_prelude::*,
 		{self as system},
 	};
-	use parity_scale_codec::{Decode, Encode, EncodeLike};
 	use scale_info::TypeInfo;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Dispatchable},
@@ -515,8 +515,9 @@ pub mod pallet {
 			let now = <frame_system::Pallet<T>>::block_number();
 			let mut votes = match Votes::<T>::get(src_id, (nonce, prop.clone())) {
 				Some(v) => v,
-				None =>
-					ProposalVotes { expiry: now + T::ProposalLifetime::get(), ..Default::default() },
+				None => {
+					ProposalVotes { expiry: now + T::ProposalLifetime::get(), ..Default::default() }
+				},
 			};
 
 			// Ensure the proposal isn't complete and relayer hasn't already voted

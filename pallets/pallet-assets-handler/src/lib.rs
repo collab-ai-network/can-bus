@@ -20,7 +20,10 @@
 
 use frame_support::{
 	pallet_prelude::*,
-	traits::{tokens::{fungible::Mutate, fungibles::Mutate}, Currency, ReservableCurrency, StorageVersion},
+	traits::{
+		tokens::{fungible::Mutate, fungibles::Mutate},
+		Currency, ReservableCurrency, StorageVersion,
+	},
 };
 use frame_system::pallet_prelude::*;
 use hex_literal::hex;
@@ -52,7 +55,9 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_balances::Config + pallet_assets::Config {
+	pub trait Config:
+		frame_system::Config + pallet_balances::Config + pallet_assets::Config
+	{
 		/// Overarching event type
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -68,7 +73,7 @@ pub mod pallet {
 			+ MaybeSerializeDeserialize
 			+ MaxEncodedLen
 			+ TypeInfo;
-		
+
 		/// Treasury account to receive assets fee
 		type TreasuryAccount: Get<Self::AccountId>;
 	}
@@ -76,7 +81,8 @@ pub mod pallet {
 	// Resource Id of pallet assets token
 	#[pallet::storage]
 	#[pallet::getter(fn resource_to_asset_info)]
-	pub type ResourceToAssetInfo<T: Config> = StorageMap<_, Twox64Concat, ResourceId, AssetInfo, OptionQuery>;
+	pub type ResourceToAssetInfo<T: Config> =
+		StorageMap<_, Twox64Concat, ResourceId, AssetInfo, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -104,10 +110,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
 			ResourceToAssetInfo::<T>::insert(resource_id, asset);
-			Self::deposit_event(Event::ResourceUpdated(
-				resource_id,
-				asset,
-			));
+			Self::deposit_event(Event::ResourceUpdated(resource_id, asset));
 			Ok(())
 		}
 
@@ -120,53 +123,69 @@ pub mod pallet {
 		pub fn remove_resource(origin: OriginFor<T>, resource_id: ResourceId) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
 			ResourceToAssetInfo::<T>::remove(resource_id);
-			Self::deposit_event(Event::ResourceRemoved(
-				resource_id,
-			));
+			Self::deposit_event(Event::ResourceRemoved(resource_id));
 			Ok(())
 		}
 	}
 
-	impl<T, Balance> BridgeHandler<Balance, T::AcountId, ResourceId> for Pallet<T> 
+	impl<T, Balance> BridgeHandler<Balance, T::AcountId, ResourceId> for Pallet<T>
 	where
-		T: Config<Balance = Balance> + pallet_asset::Config<Balance = Balance> + pallet_balances::Config<Balance = Balance>,
+		T: Config<Balance = Balance>
+			+ pallet_asset::Config<Balance = Balance>
+			+ pallet_balances::Config<Balance = Balance>,
 	{
-		fn prepare_token_bridge_in(resource_id: ResourceId, who: T::AcountId, amount: Balance) -> Result<Balance, DispatchError> {
+		fn prepare_token_bridge_in(
+			resource_id: ResourceId,
+			who: T::AcountId,
+			amount: Balance,
+		) -> Result<Balance, DispatchError> {
 			let asset_info = Self::resource_to_asset_info(resource_id);
 			match asset_info {
-				None => {
-					Err(Error::<T>::InvalidResourceId.into())
-				},
+				None => Err(Error::<T>::InvalidResourceId.into()),
 				// Native token
 				Some(asset_info_inner) if asset_info_inner.asset == None => {
-					pallet_balances::Pallet<T>::mint_into(who, amount)
+					pallet_balances::Pallet::<T>::mint_into(who, amount)
 				},
 				// pallet assets
-				Some(asset_info_inner) => {
-					pallet_assets::Pallet<T>::mint_into(asset, who, amount)
-				}
+				Some(asset_info_inner) => pallet_assets::Pallet::<T>::mint_into(asset, who, amount),
 			}
 		}
 		// Return actual amount to target chain after deduction e.g fee
-		fn prepare_token_bridge_out(resource_id: ResourceId, who: T::AcountId, amount: Balance) -> Result<Balance, DispatchError> {
+		fn prepare_token_bridge_out(
+			resource_id: ResourceId,
+			who: T::AcountId,
+			amount: Balance,
+		) -> Result<Balance, DispatchError> {
 			let asset_info = Self::resource_to_asset_info(resource_id);
 			match asset_info {
-				None => {
-					Err(Error::<T>::InvalidResourceId.into())
-				},
+				None => Err(Error::<T>::InvalidResourceId.into()),
 				// Native token
-				Some(AssetInfo { fee: fee, asset: None}) => {
-					let burn_amount = pallet_balances::Pallet<T>::burn_from(who, amount, Preservation::Preserve, Precision::Exact, Fortitude::Polite)?;
+				Some(AssetInfo { fee: fee, asset: None }) => {
+					let burn_amount = pallet_balances::Pallet::<T>::burn_from(
+						who,
+						amount,
+						Preservation::Preserve,
+						Precision::Exact,
+						Fortitude::Polite,
+					)?;
 					ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
+					pallet_balances::Pallet::<T>::mint_into(T::TreasuryAccount::get(), fee)?;
 					Ok((burn_amount - fee))
 				},
 				// pallet assets
-				Some(AssetInfo { fee: fee, asset: Some(asset)}) => {
-					let burn_amount = pallet_assets::Pallet<T>::burn_from(asset, who, amount, Preservation::Expendable, Precision::Exact, Fortitude::Polite)?
+				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
+					let burn_amount = pallet_assets::Pallet::<T>::burn_from(
+						asset,
+						who,
+						amount,
+						Preservation::Expendable,
+						Precision::Exact,
+						Fortitude::Polite,
+					)?;
 					ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
-					pallet_assets::Pallet<T>::mint_into(asset, T::TreasuryAccount::get(), fee)
+					pallet_assets::Pallet::<T>::mint_into(asset, T::TreasuryAccount::get(), fee)?;
 					Ok((burn_amount - fee))
-				}
+				},
 			}
 		}
 	}

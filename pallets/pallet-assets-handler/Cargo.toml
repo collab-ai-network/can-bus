@@ -9,7 +9,7 @@ repository = 'https://github.com/litentry/litentry-parachain'
 version = '0.1.0'
 
 [dependencies]
-parity-scale-codec = { workspace = true }
+codec = { workspace = true }
 scale-info = { workspace = true }
 
 frame-support = { workspace = true }
@@ -29,7 +29,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
 ]
 std = [
-    "parity-scale-codec/std",
+    "codec/std",
     "scale-info/std",
     "sp-std/std",
     "sp-runtime/std",

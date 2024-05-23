@@ -77,8 +77,14 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A certain amount of native tokens was minted
-		NativeTokenMinted { to: T::AccountId, amount: BalanceOf<T> },
-		AssetTokenMinted { to: T::AccountId, amount: BalanceOf<T> },
+		NativeTokenMinted {
+			to: T::AccountId,
+			amount: BalanceOf<T>,
+		},
+		AssetTokenMinted {
+			to: T::AccountId,
+			amount: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::call]
@@ -97,8 +103,15 @@ pub mod pallet {
 		) -> DispatchResult {
 			let source = ensure_signed(origin)?;
 			ensure!(T::TransferNativeMembers::contains(&source), BadOrigin);
-			let actual_dest_amount = T::BridgeHandler::prepare_token_bridge_out(resource_id, source, amount)?;
-			<bridge::Pallet<T>>::signal_transfer_fungible(source, dest_id, resource_id, recipient, actual_dest_amount)
+			let actual_dest_amount =
+				T::BridgeHandler::prepare_token_bridge_out(resource_id, source, amount)?;
+			<bridge::Pallet<T>>::signal_transfer_fungible(
+				source,
+				dest_id,
+				resource_id,
+				recipient,
+				actual_dest_amount,
+			)
 		}
 
 		/// Executes a simple currency transfer using the bridge account as the source
