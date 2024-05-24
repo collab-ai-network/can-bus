@@ -381,6 +381,11 @@ impl pallet_base_fee::Config for Runtime {
 	type DefaultElasticity = DefaultElasticity;
 }
 
+impl pallet_template::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const HavlingMintId: PalletId = PalletId(*b"can/hlvm");
 }
@@ -409,7 +414,8 @@ construct_runtime!(
 		EVM: pallet_evm = 8,
 		EVMChainId: pallet_evm_chain_id = 9,
 		BaseFee: pallet_base_fee = 10,
-		HalvingMint: pallet_halving_mint = 11,
+		Template: pallet_template = 11,
+		HalvingMint: pallet_halving_mint = 12,
 	}
 );
 

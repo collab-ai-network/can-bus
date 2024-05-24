@@ -65,6 +65,7 @@ pallet-evm-precompile-modexp = { workspace = true }
 pallet-evm-precompile-sha3fips = { workspace = true }
 pallet-evm-precompile-simple = { workspace = true }
 
+pallet-template = { workspace = true }
 pallet-halving-mint = { workspace = true }
 
 [build-dependencies]
@@ -123,6 +124,7 @@ std = [
     "pallet-evm-precompile-modexp/std",
     "pallet-evm-precompile-sha3fips/std",
 
+	"pallet-template/std",
 	"pallet-halving-mint/std",
 
 	"substrate-wasm-builder",
@@ -140,6 +142,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"pallet-ethereum/runtime-benchmarks",
 	"pallet-evm/runtime-benchmarks",
+	"pallet-template/runtime-benchmarks",
 	"pallet-halving-mint/runtime-benchmarks",
 ]
 
@@ -160,6 +163,7 @@ try-runtime = [
     "pallet-evm/try-runtime",
 	"pallet-evm-chain-id/try-runtime",
 	"pallet-base-fee/try-runtime",
+	"pallet-template/try-runtime",
 	"pallet-halving-mint/try-runtime",
 ]
 
