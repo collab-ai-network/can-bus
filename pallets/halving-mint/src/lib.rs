@@ -21,7 +21,6 @@ use codec::{Decode, Encode};
 use frame_support::traits::Currency;
 pub use pallet::*;
 use scale_info::TypeInfo;
-#[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
