@@ -8,6 +8,7 @@ homepage = "https://substrate.io"
 [workspace]
 members = [
     "node",
+    "pallets/halving-mint",
     "pallets/template",
     "runtime",
     "precompiles/*",
@@ -179,5 +180,6 @@ xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-s
 
 # local
 pallet-template = { path = "pallets/template", default-features = false }
+pallet-halving-mint = { path = "pallets/halving-mint", default-features = false }
 canbus-runtime = { path = "runtime", default-features = false }
 pallet-template-precompile = { path = "precompiles/pallet-template", default-features = false }
