@@ -30,7 +30,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use hex_literal::hex;
-pallet_assets_handler::AssetInfo;
+use pallet_assets_handler::AssetInfo;
 use pallet_bridge::{BalanceOf as balance, EnsureOrigin, Get};
 use sp_arithmetic::traits::Saturating;
 use sp_runtime::traits::AccountIdConversion;
