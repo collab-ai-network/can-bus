@@ -24,7 +24,10 @@ use frame_support::{
 };
 use frame_system::{self as system};
 use sp_core::{ConstU16, H256};
-use sp_runtime::traits::{AccountIdConversion, BlakeTwo256, BuildStorage, IdentityLookup};
+use sp_runtime::{
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+	BuildStorage,
+};
 
 use crate::{self as bridge, Config};
 
@@ -51,14 +54,14 @@ impl frame_system::Config for Test {
 	type Nonce = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = pallet_balances::AccountData<u64>;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Block = Block;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
