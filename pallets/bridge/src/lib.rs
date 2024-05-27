@@ -457,8 +457,8 @@ pub mod pallet {
 		fn bump_nonce(id: BridgeChainId) -> Result<DepositNonce, Error<T>> {
 			let nonce = Self::chains(id).unwrap_or_default();
 			let new_nonce = nonce.checked_add(1u64).ok_or(Error::<T>::NonceOverFlow);
-			if new_nonce.is_ok() {
-				ChainNonces::<T>::insert(id, new_nonce.as_ref().unwrap());
+			if let Ok(nonce_inner) = &new_nonce {
+				ChainNonces::<T>::insert(id, nonce_inner);
 			}
 			new_nonce
 		}
@@ -610,7 +610,6 @@ pub mod pallet {
 		/// Initiates a singal Event for fungible asset out of the chain. This should be called by
 		/// another pallet.
 		pub fn signal_transfer_fungible(
-			sender: T::AccountId,
 			dest_id: BridgeChainId,
 			resource_id: ResourceId,
 			to: Vec<u8>,

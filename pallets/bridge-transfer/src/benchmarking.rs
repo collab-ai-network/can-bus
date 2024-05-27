@@ -18,7 +18,9 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 #![allow(clippy::type_complexity)]
+#[allow(clippy::duplicated_attributes)]
 #[allow(unused)]
+#[allow(clippy::useless_vec)]
 use super::*;
 use bridge::BalanceOf as balance;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};

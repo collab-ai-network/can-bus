@@ -92,7 +92,6 @@ pub mod pallet {
 			let actual_dest_amount =
 				T::BridgeHandler::prepare_token_bridge_out(resource_id, source, amount)?;
 			<bridge::Pallet<T>>::signal_transfer_fungible(
-				source,
 				dest_id,
 				resource_id,
 				recipient,

@@ -446,7 +446,6 @@ fn signal_transfer_fungible() {
 		let dest_account: Vec<u8> = vec![1];
 		assert_ok!(Pallet::<Test>::whitelist_chain(RuntimeOrigin::root(), dest_id));
 		assert_ok!(Pallet::<Test>::signal_transfer_fungible(
-			RELAYER_A,
 			dest_id,
 			resource_id,
 			dest_account.clone(),
