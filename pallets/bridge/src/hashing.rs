@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use sp_core::blake2_128;
+use sp_core::blake2_128 as impl_blake2_128;
 
 /// Do a Blake2 128-bit hash and return result.
 pub fn blake2_128(data: &[u8]) -> [u8; 16] {
-	blake2_128(data)
+	impl_blake2_128(data)
 }
