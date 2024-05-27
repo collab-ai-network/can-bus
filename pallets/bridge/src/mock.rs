@@ -39,7 +39,7 @@ frame_support::construct_runtime!(
 	pub enum Test
 	{
 		System: frame_system,
-		TemplateModule: pallet_template,
+		Balances: pallet_balances,
 		Bridge: bridge,
 	}
 );
@@ -103,6 +103,7 @@ impl Config for Test {
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
+	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
 	type WeightInfo = ();
 }

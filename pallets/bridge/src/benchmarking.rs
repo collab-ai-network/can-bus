@@ -88,11 +88,6 @@ benchmarks! {
 			src_id,
 		)?;
 
-		bridge::<T>::set_resource(
-			RawOrigin::Root.into(),
-			r_id,method,
-		)?;
-
 	}:_(RawOrigin::Signed(relayer_id),prop_id,src_id, r_id, Box::new(proposal))
 	verify{
 		assert_last_event::<T>(Event::ProposalSucceeded(src_id, prop_id).into());
@@ -116,12 +111,6 @@ benchmarks! {
 		bridge::<T>::whitelist_chain(
 			RawOrigin::Root.into(),
 			src_id,
-		)?;
-
-		bridge::<T>::set_resource(
-			RawOrigin::Root.into(),
-			r_id,
-			method,
 		)?;
 
 	}:_(RawOrigin::Signed(relayer_id),prop_id,src_id,r_id,Box::new(proposal))
@@ -159,12 +148,6 @@ benchmarks! {
 		bridge::<T>::whitelist_chain(
 			RawOrigin::Root.into(),
 			src_id,
-		)?;
-
-		bridge::<T>::set_resource(
-			RawOrigin::Root.into(),
-			r_id,
-			method,
 		)?;
 
 		bridge::<T>::reject_proposal(

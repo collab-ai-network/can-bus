@@ -36,7 +36,7 @@ pub mod pallet {
 	use codec::EncodeLike;
 	use frame_support::{
 		dispatch::GetDispatchInfo,
-		traits::{fungible::Mutate, Currency, ExistenceRequirement::AllowDeath, WithdrawReasons},
+		traits::{fungible::Mutate, Currency},
 	};
 	pub use frame_support::{pallet_prelude::*, traits::StorageVersion, PalletId, Parameter};
 	use frame_system::{
@@ -168,6 +168,10 @@ pub mod pallet {
 		/// chains.
 		#[pallet::constant]
 		type BridgeChainId: Get<BridgeChainId>;
+
+		/// Currency impl
+		type Currency: Currency<Self::AccountId>
+			+ Mutate<Self::AccountId, Balance = BalanceOf<Self>>;
 
 		#[pallet::constant]
 		type ProposalLifetime: Get<BlockNumberFor<Self>>;
@@ -368,7 +372,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			nonce: DepositNonce,
 			src_id: BridgeChainId,
-			r_id: ResourceId,
+			// TODO: remove will require token bridge binary change
+			// Resource info is in proposal call
+			_r_id: ResourceId,
 			call: Box<<T as Config>::Proposal>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -389,7 +395,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			nonce: DepositNonce,
 			src_id: BridgeChainId,
-			r_id: ResourceId,
+			// TODO: remove will require token bridge binary change
+			// Resource info is in proposal call
+			_r_id: ResourceId,
 			call: Box<<T as Config>::Proposal>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;

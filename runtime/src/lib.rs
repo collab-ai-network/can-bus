@@ -446,6 +446,7 @@ impl pallet_bridge::Config for Runtime {
 	type BridgeCommitteeOrigin = EnsureRoot;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = BridgeChainId;
+	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
 	type WeightInfo = weights::pallet_bridge::WeightInfo<Runtime>;
 }
