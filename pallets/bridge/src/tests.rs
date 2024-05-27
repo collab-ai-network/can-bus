@@ -469,13 +469,7 @@ fn transfer_fungible_no_whitelist() {
 		let resource_id = derive_resource_id(dest_id, b"remark");
 		let dest_account: Vec<u8> = vec![1];
 		assert_noop!(
-			Pallet::<Test>::signal_transfer_fungible(
-				RELAYER_A,
-				dest_id,
-				resource_id,
-				dest_account,
-				100,
-			),
+			Pallet::<Test>::signal_transfer_fungible(dest_id, resource_id, dest_account, 100,),
 			Error::<Test>::ChainNotWhitelisted
 		);
 	})

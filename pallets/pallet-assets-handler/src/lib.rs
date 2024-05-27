@@ -21,16 +21,19 @@
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		tokens::{fungible::Mutate, fungibles::Mutate},
+		tokens::{
+			fungible::Mutate as FMutate, fungibles::Mutate as FsMutate, Fortitude, Precision,
+			Preservation,
+		},
 		Currency, ReservableCurrency, StorageVersion,
 	},
 };
 use frame_system::pallet_prelude::*;
 use hex_literal::hex;
 pub use pallet::*;
-use sp_runtime::traits::StaticLookup;
+use pallet_bridge_transfer::BridgeHandler;
+use sp_runtime::traits::{AtLeast32BitUnsigned, StaticLookup};
 
-use sp_std::vec::Vec;
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 type AssetId<T> = <T as pallet_assets::Config>::AssetId;
 type ResourceId = pallet_bridge::ResourceId;
@@ -99,13 +102,13 @@ pub mod pallet {
 		TokenBridgeIn {
 			asset_id: Option<AssetId<T>>,
 			to: T::AccountId,
-			amount: BalanceOf<T>,
+			amount: T::Balance,
 		},
 		TokenBridgeOut {
 			asset_id: Option<AssetId<T>>,
 			to: T::AccountId,
-			amount: BalanceOf<T>,
-			fee: BalanceOf<T>,
+			amount: T::Balance,
+			fee: T::Balance,
 		},
 	}
 
@@ -148,7 +151,8 @@ pub mod pallet {
 	impl<T, Balance> BridgeHandler<Balance, T::AcountId, ResourceId> for Pallet<T>
 	where
 		T: Config<Balance = Balance>
-			+ pallet_asset::Config<Balance = Balance>
+			+ frame_system::Config
+			+ pallet_assets::Config<Balance = Balance>
 			+ pallet_balances::Config<Balance = Balance>,
 	{
 		fn prepare_token_bridge_in(
@@ -192,7 +196,7 @@ pub mod pallet {
 					)?;
 					ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
 					pallet_balances::Pallet::<T>::mint_into(T::TreasuryAccount::get(), fee)?;
-					Ok((burn_amount - fee))
+					Ok(burn_amount - fee)
 				},
 				// pallet assets
 				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
@@ -207,7 +211,7 @@ pub mod pallet {
 					)?;
 					ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
 					pallet_assets::Pallet::<T>::mint_into(asset, T::TreasuryAccount::get(), fee)?;
-					Ok((burn_amount - fee))
+					Ok(burn_amount - fee)
 				},
 			}
 		}
