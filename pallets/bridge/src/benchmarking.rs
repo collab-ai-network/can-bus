@@ -19,7 +19,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 #![allow(clippy::type_complexity)]
 #![allow(clippy::duplicated_attributes)]
-#[allow(clippy::useless_vec)]
+#![allow(clippy::useless_vec)]
 use super::*;
 use crate::{BridgeChainId, Call, Event, Pallet as bridge};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
