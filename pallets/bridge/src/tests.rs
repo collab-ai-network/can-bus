@@ -19,8 +19,8 @@
 use super::{
 	mock::{
 		assert_events, new_test_ext, new_test_ext_initialized, Balances, Bridge, ProposalLifetime,
-		RuntimeCall, RuntimeEvent, RuntimeOrigin, System, Test, TestChainId, TreasuryAccount,
-		ENDOWED_BALANCE, RELAYER_A, RELAYER_B, RELAYER_C, TEST_THRESHOLD,
+		RuntimeCall, RuntimeEvent, RuntimeOrigin, System, Test, TestChainId, ENDOWED_BALANCE,
+		RELAYER_A, RELAYER_B, RELAYER_C, TEST_THRESHOLD,
 	},
 	pallet::Event as PalletEvent,
 	*,
@@ -311,7 +311,7 @@ fn execute_after_threshold_change() {
 	let src_id = 1;
 	let r_id = derive_resource_id(src_id, b"transfer");
 
-	new_test_ext_initialized(src_id, WEIGHT_REF_TIME_PER_SECOND).execute_with(|| {
+	new_test_ext_initialized(src_id, r_id).execute_with(|| {
 		let prop_id = 1;
 		let proposal = make_proposal(vec![11]);
 
@@ -469,7 +469,13 @@ fn transfer_fungible_no_whitelist() {
 		let resource_id = derive_resource_id(dest_id, b"remark");
 		let dest_account: Vec<u8> = vec![1];
 		assert_noop!(
-			Pallet::<Test>::transfer_fungible(RELAYER_A, dest_id, resource_id, dest_account, 100,),
+			Pallet::<Test>::signal_transfer_fungible(
+				RELAYER_A,
+				dest_id,
+				resource_id,
+				dest_account,
+				100,
+			),
 			Error::<Test>::ChainNotWhitelisted
 		);
 	})

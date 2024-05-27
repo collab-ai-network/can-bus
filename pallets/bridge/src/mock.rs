@@ -19,18 +19,14 @@
 use super::*;
 
 use frame_support::{
-	assert_ok, ord_parameter_types, parameter_types,
+	assert_ok, derive_impl, ord_parameter_types, parameter_types,
 	traits::{ConstU32, ConstU64},
 };
 use frame_system::{self as system};
-use sp_core::H256;
-use sp_runtime::{
-	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-};
+use sp_core::{ConstU16, H256};
+use sp_runtime::traits::{AccountIdConversion, BlakeTwo256, BuildStorage, IdentityLookup};
 
 use crate::{self as bridge, Config};
-pub use pallet_balances as balances;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -55,7 +51,7 @@ impl frame_system::Config for Test {
 	type Nonce = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = pallet_balances::AccountData<u64>;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Block = Block;
 	type RuntimeEvent = RuntimeEvent;
@@ -135,7 +131,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 pub fn new_test_ext_initialized(
 	src_id: BridgeChainId,
-	r_id: ResourceId,
+	_r_id: ResourceId,
 ) -> sp_io::TestExternalities {
 	let mut t = new_test_ext();
 	t.execute_with(|| {

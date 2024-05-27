@@ -17,7 +17,7 @@
 #![cfg(test)]
 
 use frame_support::{
-	ord_parameter_types, parameter_types,
+	derive_impl, ord_parameter_types, parameter_types,
 	traits::{ConstU32, ConstU64, SortedMembers},
 	PalletId,
 };

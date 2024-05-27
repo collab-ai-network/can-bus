@@ -33,11 +33,11 @@ pub mod pallet {
 	use crate::weights::WeightInfo;
 	use frame_support::{
 		pallet_prelude::*,
-		traits::{fungible::Mutate, Currency, SortedMembers, StorageVersion},
+		traits::{Currency, SortedMembers, StorageVersion},
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::{BadOrigin, CheckedAdd, CheckedSub};
+	use sp_runtime::traits::BadOrigin;
 	use sp_std::vec::Vec;
 
 	pub use pallet_bridge as bridge;
