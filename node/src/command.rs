@@ -39,9 +39,8 @@ impl SubstrateCli for Cli {
 	fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 		Ok(match id {
 			"" | "dev" => Box::new(chain_spec::chain_spec_dev()?),
-			path => {
-				Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?)
-			},
+			path =>
+				Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
 		})
 	}
 }
@@ -103,13 +102,10 @@ pub fn run() -> sc_cli::Result<()> {
 							DatabaseSource::ParityDb { .. } => DatabaseSource::ParityDb {
 								path: frontier_database_dir(&db_config_dir, "paritydb"),
 							},
-							_ => {
-								return Err(format!(
-									"Cannot purge `{:?}` database",
-									config.database
-								)
-								.into())
-							},
+							_ =>
+								return Err(
+									format!("Cannot purge `{:?}` database", config.database).into()
+								),
 						};
 						cmd.run(frontier_database_config)?;
 					},
@@ -122,13 +118,12 @@ pub fn run() -> sc_cli::Result<()> {
 							Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
 								eprintln!("{:?} did not exist.", &db_path);
 							},
-							Err(err) => {
+							Err(err) =>
 								return Err(format!(
 									"Cannot purge `{:?}` database: {:?}",
 									db_path, err,
 								)
-								.into())
-							},
+								.into()),
 						};
 					},
 				};
@@ -189,9 +184,8 @@ pub fn run() -> sc_cli::Result<()> {
 
 					cmd.run(client, inherent_benchmark_data()?, Vec::new(), &ext_factory)
 				}),
-				BenchmarkCmd::Machine(cmd) => {
-					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
-				},
+				BenchmarkCmd::Machine(cmd) =>
+					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
 			}
 		},
 		#[cfg(feature = "try-runtime")]
