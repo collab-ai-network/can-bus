@@ -1,0 +1,29 @@
+[package]
+name = "chainbridge-monitor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
+ethers = { version = "2.0", features = [
+    "abigen",
+    "rustls",
+    "ws",
+    "ethers-solc",
+] }
+anyhow = { version = "1.0.83" }
+warp = "0.3"
+prometheus = "0.10"
+substrate-api-client = { version = "0.17.0" }
+# substrate-deps
+sp-core = "*"
+parity-scale-codec = { version = "3.6", default-features = false, features = [
+    "derive",
+    "max-encoded-len",
+] }
+influxdb = { version = "0.7.2", features = ["derive"] }
+chrono = "*"
+serde = "*"
+structopt = "0.3"
+
+[workspace]
