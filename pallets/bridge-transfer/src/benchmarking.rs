@@ -29,6 +29,8 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::RawOrigin;
+use hex_literal::hex;
+pallet_assets_handler::AssetInfo;
 use pallet_bridge::{BalanceOf as balance, EnsureOrigin, Get};
 use sp_arithmetic::traits::Saturating;
 use sp_runtime::traits::AccountIdConversion;
@@ -57,15 +59,15 @@ benchmarks! {
 			dest_chain,
 		)?;
 
-		let r_id =  crate::mock::NativeTokenResourceId::get();
+		let r_id = hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
 		let native_token_asset_info: pallet_assets_handler::AssetInfo<T> = AssetInfo(0u64, None);
 
 		pallet_assets_handler::Pallet::<T>::set_resource(RawOrigin::Root.into(), r_id, native_token_asset_info)?;
 
-	}:_(RawOrigin::Signed(sender),50u32.into(),vec![0u8, 0u8, 0u8, 0u8],dest_chain)
+	}:_(RawOrigin::Signed(sender),50u32.into(),vec![0u8, 0u8, 0u8, 0u8],dest_chain,r_id)
 
 	transfer{
-		let r_id =  crate::mock::NativeTokenResourceId::get();
+		let r_id = hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
 		let native_token_asset_info: pallet_assets_handler::AssetInfo<T> = AssetInfo(0u64, None);
 
 		pallet_assets_handler::Pallet::<T>::set_resource(RawOrigin::Root.into(), r_id, native_token_asset_info)?;
