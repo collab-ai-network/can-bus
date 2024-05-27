@@ -45,27 +45,30 @@ fn create_user<T: Config>(string: &'static str, n: u32, seed: u32) -> T::Account
 }
 
 benchmarks! {
-	transfer_native{
+	transfer_assets{
 		let sender:T::AccountId = create_user::<T>("sender",0u32,1u32);
 
 		ensure!(T::TransferNativeMembers::contains(&sender),"add transfer_native_member failed");
 
 		let dest_chain = 0;
 
-		pallet_bridge::Pallet::<T>::update_fee(
-			RawOrigin::Root.into(),
-			dest_chain,
-			10u32.into(),
-		)?;
-
 		pallet_bridge::Pallet::<T>::whitelist_chain(
 			RawOrigin::Root.into(),
 			dest_chain,
 		)?;
 
+		let r_id =  crate::mock::NativeTokenResourceId::get();
+		let native_token_asset_info: pallet_assets_handler::AssetInfo<T> = AssetInfo(0u64, None);
+
+		pallet_assets_handler::Pallet::<T>::set_resource(RawOrigin::Root.into(), r_id, native_token_asset_info)?;
+
 	}:_(RawOrigin::Signed(sender),50u32.into(),vec![0u8, 0u8, 0u8, 0u8],dest_chain)
 
 	transfer{
+		let r_id =  crate::mock::NativeTokenResourceId::get();
+		let native_token_asset_info: pallet_assets_handler::AssetInfo<T> = AssetInfo(0u64, None);
+
+		pallet_assets_handler::Pallet::<T>::set_resource(RawOrigin::Root.into(), r_id, native_token_asset_info)?;
 
 		let sender = PalletId(*b"litry/bg").into_account_truncating();
 
@@ -75,24 +78,7 @@ benchmarks! {
 
 		let to_account:T::AccountId = create_user::<T>("to",1u32,2u32);
 
-		let resource_id :bridge::ResourceId= T::NativeTokenResourceId::get();
-
-	}:_(RawOrigin::Signed(sender),to_account,50u32.into(),resource_id)
-
-	set_maximum_issuance{
-		let origin = T::SetMaximumIssuanceOrigin::try_successful_origin().expect("SetMaximumIssuanceOrigin has no successful origin required for the benchmark");
-		let maximum_issuance:balance<T> = 2u32.into();
-	}:_<T::RuntimeOrigin>(origin,maximum_issuance)
-	verify{
-		assert_eq!(MaximumIssuance::<T>::get(),maximum_issuance);
-	}
-
-	set_external_balances{
-		let external_balances:balance<T> = (MAXIMUM_ISSURANCE / 2).into();
-	}:_(RawOrigin::Root,external_balances)
-	verify{
-		assert_eq!(<ExternalBalances<T>>::get(),external_balances);
-	}
+	}:_(RawOrigin::Signed(sender),to_account,50u32.into(),r_id)
 }
 
 impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
