@@ -43,28 +43,6 @@ benchmarks! {
 		assert_eq!(RelayerThreshold::<T>::get(),i);
 	}
 
-	set_resource{
-		let resource_id = [1u8;32];
-		let method = vec![0u8];
-	}:_(RawOrigin::Root,resource_id,method.clone())
-	verify{
-		assert_eq!(Resources::<T>::get(resource_id),Some(method));
-	}
-
-	remove_resource{
-		let resource_id = [1u8;32];
-		let method = vec![0u8];
-
-		bridge::<T>::set_resource(
-			RawOrigin::Root.into(),
-			resource_id,
-			method,
-		)?;
-	}:_(RawOrigin::Root,resource_id)
-	verify{
-		assert!(!Resources::<T>::contains_key(resource_id));
-	}
-
 	whitelist_chain{
 		let bridgechain_id = T::BridgeChainId::get().saturating_add(1);
 	}:_(RawOrigin::Root,bridgechain_id)
@@ -89,13 +67,6 @@ benchmarks! {
 	}:_(RawOrigin::Root,relayer_id.clone())
 	verify{
 		  assert!(!Relayers::<T>::contains_key(relayer_id));
-	}
-
-	update_fee{
-		let dest_id:BridgeChainId =0;
-	}:_(RawOrigin::Root,dest_id,1u32.into())
-	verify{
-		assert!(BridgeFee::<T>::contains_key(dest_id));
 	}
 
 	acknowledge_proposal{

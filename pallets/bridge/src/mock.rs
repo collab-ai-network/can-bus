@@ -32,51 +32,43 @@ use sp_runtime::{
 use crate::{self as bridge, Config};
 pub use pallet_balances as balances;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
+	pub enum Test
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Bridge: bridge::{Pallet, Call, Storage, Event<T>},
+		System: frame_system,
+		TemplateModule: pallet_template,
+		Bridge: bridge,
 	}
 );
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-}
-
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
+	type Block = Block;
 	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type DbWeight = ();
+	type BlockHashCount = ConstU64<250>;
 	type Version = ();
-	type AccountData = pallet_balances::AccountData<u64>;
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
-	type PalletInfo = PalletInfo;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type SS58Prefix = ();
+	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
-	type MaxConsumers = ConstU32<16>;
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 ord_parameter_types! {
@@ -93,10 +85,11 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ConstU32<100>;
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type HoldIdentifier = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ();
 	type MaxFreezes = ();
+	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 }
 
 parameter_types! {
@@ -110,9 +103,7 @@ impl Config for Test {
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
-	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
-	type TreasuryAccount = TreasuryAccount;
 	type WeightInfo = ();
 }
 
@@ -144,7 +135,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 pub fn new_test_ext_initialized(
 	src_id: BridgeChainId,
 	r_id: ResourceId,
-	resource: Vec<u8>,
 ) -> sp_io::TestExternalities {
 	let mut t = new_test_ext();
 	t.execute_with(|| {
@@ -157,9 +147,6 @@ pub fn new_test_ext_initialized(
 		assert_ok!(Bridge::add_relayer(RuntimeOrigin::root(), RELAYER_C));
 		// Whitelist chain
 		assert_ok!(Bridge::whitelist_chain(RuntimeOrigin::root(), src_id));
-		// Set and check resource ID mapped to some junk data
-		assert_ok!(Bridge::set_resource(RuntimeOrigin::root(), r_id, resource));
-		assert!(Bridge::resource_exists(r_id));
 	});
 	t
 }

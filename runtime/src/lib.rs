@@ -442,9 +442,7 @@ impl pallet_bridge::Config for Runtime {
 	type BridgeCommitteeOrigin = EnsureRoot;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = BridgeChainId;
-	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
-	type TreasuryAccount = TreasuryAccount;
 	type WeightInfo = weights::pallet_bridge::WeightInfo<Runtime>;
 }
 
@@ -468,6 +466,7 @@ impl SortedMembers<AccountId> for TransferNativeAnyone {
 impl pallet_assets_handler::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type BridgeCommitteeOrigin = EnsureRoot;
+	type Balance = Balance;
 	type TreasuryAccount = TreasuryAccount;
 }
 

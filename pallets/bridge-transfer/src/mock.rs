@@ -21,7 +21,7 @@ use frame_support::{
 	traits::{ConstU32, ConstU64, SortedMembers},
 	PalletId,
 };
-use frame_system::{self as system, EnsureSignedBy};
+use frame_system::{self as system, EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use sp_core::H256;
 use sp_runtime::{
@@ -35,51 +35,46 @@ use pallet_bridge as bridge;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-pub const MAXIMUM_ISSURANCE: u64 = 20_000_000_000_000;
 
+// Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
+	pub enum Test
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Bridge: bridge::{Pallet, Call, Storage, Event<T>},
-		BridgeTransfer: bridge_transfer::{Pallet, Call, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		System: frame_system,
+		TemplateModule: pallet_template,
+		Bridge: bridge,
+		BridgeTransfer: bridge_transfer,
+		AssetsHandler: pallet_assets_handler,
+		Assets: pallet_assets,
+		Timestamp: pallet_timestamp,
 	}
 );
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-}
-
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u64;
+	type Nonce = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
+	type Block = Block;
 	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type DbWeight = ();
+	type BlockHashCount = ConstU64<250>;
 	type Version = ();
-	type AccountData = pallet_balances::AccountData<u64>;
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
-	type PalletInfo = PalletInfo;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type SS58Prefix = ();
+	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
-	type MaxConsumers = ConstU32<16>;
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 ord_parameter_types! {
@@ -96,15 +91,16 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ConstU32<100>;
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type HoldIdentifier = ();
 	type FreezeIdentifier = ();
 	type MaxHolds = ();
 	type MaxFreezes = ();
+	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 }
 
 parameter_types! {
 	pub const TestChainId: u8 = 5;
-	pub const ProposalLifetime: u64 = 100;
+	pub const ProposalLifetime: u64 = 50;
 	pub const TreasuryAccount:u64 = 0x8;
 }
 
@@ -113,23 +109,15 @@ impl bridge::Config for Test {
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
-	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
-	type TreasuryAccount = TreasuryAccount;
 	type WeightInfo = ();
 }
 
 parameter_types! {
-	pub const MaximumIssuance: u64 = MAXIMUM_ISSURANCE;
-	pub const ExternalTotalIssuance: u64 = MAXIMUM_ISSURANCE;
 	// bridge::derive_resource_id(1, &bridge::hashing::blake2_128(b"LIT"));
 	pub const NativeTokenResourceId: [u8; 32] = hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
 	// transfernativemembers
 	static MembersProviderTestvalue:Vec<u64> = vec![RELAYER_A, RELAYER_B, RELAYER_C];
-}
-
-ord_parameter_types! {
-	pub const SetMaximumIssuanceOrigin: u64 = RELAYER_A;
 }
 
 pub struct MembersProvider;
@@ -154,14 +142,43 @@ impl SortedMembers<u64> for MembersProvider {
 	}
 }
 
+parameter_types! {
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/bridge");
+	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl pallet_assets::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = u64;
+	type AssetId = u32;
+	type AssetIdParameter = u32;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<Self::AccountId>>;
+	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type AssetDeposit = ConstU64<1>;
+	type AssetAccountDeposit = ConstU64<10>;
+	type MetadataDepositBase = ConstU64<1>;
+	type MetadataDepositPerByte = ConstU64<1>;
+	type ApprovalDeposit = ConstU64<1>;
+	type StringLimit = ConstU32<50>;
+	type Freezer = TestFreezer;
+	type WeightInfo = ();
+	type CallbackHandle = ();
+	type Extra = ();
+	type RemoveItemsLimit = ConstU32<5>;
+}
+
+impl pallet_assets_handler::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type BridgeCommitteeOrigin = EnsureRoot;
+	type TreasuryAccount = TreasuryAccount;
+}
+
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type BridgeOrigin = bridge::EnsureBridge<Test>;
 	type TransferNativeMembers = MembersProvider;
-	type SetMaximumIssuanceOrigin = EnsureSignedBy<SetMaximumIssuanceOrigin, u64>;
-	type NativeTokenResourceId = NativeTokenResourceId;
-	type DefaultMaximumIssuance = MaximumIssuance;
-	type ExternalTotalIssuance = ExternalTotalIssuance;
+	type BridgeHandler = AssetsHandler;
 	type WeightInfo = ();
 }
 
@@ -198,6 +215,29 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| frame_system::Pallet::<Test>::set_block_number(1));
 	ext
+}
+
+pub fn new_test_ext_initialized(
+	src_id: BridgeChainId,
+	r_id: ResourceId,
+	asset: AssetInfo,
+) -> sp_io::TestExternalities {
+	let mut t = new_test_ext();
+	t.execute_with(|| {
+		// Set and check threshold
+		assert_ok!(Bridge::set_threshold(RuntimeOrigin::root(), TEST_THRESHOLD));
+		assert_eq!(Bridge::relayer_threshold(), TEST_THRESHOLD);
+		// Add relayers
+		assert_ok!(Bridge::add_relayer(RuntimeOrigin::root(), RELAYER_A));
+		assert_ok!(Bridge::add_relayer(RuntimeOrigin::root(), RELAYER_B));
+		assert_ok!(Bridge::add_relayer(RuntimeOrigin::root(), RELAYER_C));
+		// Whitelist chain
+		assert_ok!(Bridge::whitelist_chain(RuntimeOrigin::root(), src_id));
+
+		// Setup asset handler
+		assert_ok!(AssetsHandler::set_resource(RuntimeOrigin::root(), r_id, asset));
+	});
+	t
 }
 
 // Checks events against the latest. A contiguous set of events must be provided. They must

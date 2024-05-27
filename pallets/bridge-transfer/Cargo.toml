@@ -24,6 +24,7 @@ pallet-bridge = { workspace = true }
 
 [dev-dependencies]
 hex-literal = { workspace = true }
+pallet-assets = { workspace = true, features = ["std"] }
 pallet-assets-handler = { workspace = true, features = ["std"] }
 pallet-balances = { workspace = true, features = ["std"] }
 pallet-timestamp = { workspace = true, features = ["std"] }

@@ -73,20 +73,6 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		/// A certain amount of native tokens was minted
-		NativeTokenMinted {
-			to: T::AccountId,
-			amount: BalanceOf<T>,
-		},
-		AssetTokenMinted {
-			to: T::AccountId,
-			amount: BalanceOf<T>,
-		},
-	}
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Transfers some amount of non-native token to some recipient on a (whitelisted)
@@ -117,6 +103,7 @@ pub mod pallet {
 		/// Executes a simple currency transfer using the bridge account as the source
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer())]
+		#[transactional]
 		pub fn transfer(
 			origin: OriginFor<T>,
 			to: T::AccountId,

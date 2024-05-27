@@ -33,7 +33,7 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
 	use crate::weights::WeightInfo;
-	use codec::{Decode, Encode, EncodeLike};
+	use codec::EncodeLike;
 	use frame_support::{
 		dispatch::GetDispatchInfo,
 		traits::{fungible::Mutate, Currency, ExistenceRequirement::AllowDeath, WithdrawReasons},
@@ -43,10 +43,9 @@ pub mod pallet {
 		pallet_prelude::*,
 		{self as system},
 	};
-	use scale_info::TypeInfo;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Dispatchable},
-		RuntimeDebug, SaturatedConversion,
+		SaturatedConversion,
 	};
 	use sp_std::prelude::*;
 
@@ -170,14 +169,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type BridgeChainId: Get<BridgeChainId>;
 
-		/// TODO: Seems we do not need Currency trait anymore
-		/// But this require small change of bridge transfer too
-		/// Currency impl
-		type Currency: Currency<Self::AccountId>
-			+ Mutate<Self::AccountId, Balance = BalanceOf<Self>>;
-
 		#[pallet::constant]
-		type ProposalLifetime: Get<Self::BlockNumber>;
+		type ProposalLifetime: Get<BlockNumberFor<Self>>;
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
@@ -283,10 +276,10 @@ pub mod pallet {
 		BridgeChainId,
 		Blake2_256,
 		(DepositNonce, T::Proposal),
-		ProposalVotes<T::AccountId, T::BlockNumber>,
+		ProposalVotes<T::AccountId, BlockNumberFor<T>>,
 	>;
 
-	// TODO: Depreciate after switch to event Listener
+	// TODO: !!!This storage can not be removed until Chainbridge binary switch to event Listener
 	// ChainBridge Service(https://github.com/litentry/ChainBridge) read this storage for each block,
 	// and if this storage has value, it will perform cross-chain transfer.
 	// For more details, see at: https://github.com/litentry/ChainBridge/blob/main/chains/substrate/listener.go#L186-L237
@@ -295,8 +288,8 @@ pub mod pallet {
 	pub type BridgeEvents<T> = StorageValue<_, Vec<BridgeEvent>, ValueQuery>;
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(_n: T::BlockNumber) -> Weight {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			// Clear all bridge transfer data
 			BridgeEvents::<T>::kill();
 			Weight::zero()
@@ -325,7 +318,7 @@ pub mod pallet {
 		/// # <weight>
 		/// - O(1) lookup and insert
 		/// # </weight>
-		#[pallet::call_index(3)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::whitelist_chain())]
 		pub fn whitelist_chain(origin: OriginFor<T>, id: BridgeChainId) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
@@ -337,7 +330,7 @@ pub mod pallet {
 		/// # <weight>
 		/// - O(1) lookup and insert
 		/// # </weight>
-		#[pallet::call_index(4)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::add_relayer())]
 		pub fn add_relayer(origin: OriginFor<T>, v: T::AccountId) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
@@ -349,7 +342,7 @@ pub mod pallet {
 		/// # <weight>
 		/// - O(1) lookup and removal
 		/// # </weight>
-		#[pallet::call_index(5)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_relayer())]
 		pub fn remove_relayer(origin: OriginFor<T>, v: T::AccountId) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
@@ -364,7 +357,7 @@ pub mod pallet {
 		/// # <weight>
 		/// - weight of proposed call, regardless of whether execution is performed
 		/// # </weight>
-		#[pallet::call_index(7)]
+		#[pallet::call_index(4)]
 		#[pallet::weight({
 		let di = call.get_dispatch_info();
 		(< T as Config >::WeightInfo::acknowledge_proposal()
@@ -390,7 +383,7 @@ pub mod pallet {
 		/// # <weight>
 		/// - Fixed, since execution of proposal should not be included
 		/// # </weight>
-		#[pallet::call_index(8)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(<T as Config>::WeightInfo::reject_proposal())]
 		pub fn reject_proposal(
 			origin: OriginFor<T>,
@@ -414,7 +407,7 @@ pub mod pallet {
 		/// # <weight>
 		/// - weight of proposed call, regardless of whether execution is performed
 		/// # </weight>
-		#[pallet::call_index(9)]
+		#[pallet::call_index(6)]
 		#[pallet::weight({
 		let di = prop.get_dispatch_info();
 		(< T as Config >::WeightInfo::eval_vote_state()
@@ -607,7 +600,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Initiates a transfer of a fungible asset out of the chain. This should be called by
+		/// Initiates a singal Event for fungible asset out of the chain. This should be called by
 		/// another pallet.
 		pub fn signal_transfer_fungible(
 			sender: T::AccountId,
@@ -623,14 +616,14 @@ pub mod pallet {
 				dest_id,
 				nonce,
 				resource_id,
-				actual_amount.saturated_into::<u128>(),
+				amount.saturated_into::<u128>(),
 				to.clone(),
 			));
 			Self::deposit_event(Event::FungibleTransfer(
 				dest_id,
 				nonce,
 				resource_id,
-				actual_amount.saturated_into::<u128>(),
+				amount.saturated_into::<u128>(),
 				to,
 			));
 			Ok(())

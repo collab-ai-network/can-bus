@@ -36,10 +36,10 @@ type AssetId<T> = <T as pallet_assets::Config>::AssetId;
 type ResourceId = pallet_bridge::ResourceId;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct AssetInfo {
-	fee: Balance,
+pub struct AssetInfo<T: pallet_assets::Config> {
+	fee: T::Balance,
 	// None for native token
-	asset: Option<AssetId>,
+	asset: Option<AssetId<T>>,
 }
 
 #[frame_support::pallet]
@@ -82,14 +82,31 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn resource_to_asset_info)]
 	pub type ResourceToAssetInfo<T: Config> =
-		StorageMap<_, Twox64Concat, ResourceId, AssetInfo, OptionQuery>;
+		StorageMap<_, Twox64Concat, ResourceId, AssetInfo<T>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		// asset id = None means native token
-		ResourceUpdated { resource_id: ResourceId, asset: AssetInfo },
-		ResourceRemoved { resource_id: ResourceId },
+		ResourceUpdated {
+			resource_id: ResourceId,
+			asset: AssetInfo<T>,
+		},
+		ResourceRemoved {
+			resource_id: ResourceId,
+		},
+		/// A certain amount of native tokens was minted
+		TokenBridgeIn {
+			asset_id: Option<AssetId<T>>,
+			to: T::AccountId,
+			amount: BalanceOf<T>,
+		},
+		TokenBridgeOut {
+			asset_id: Option<AssetId<T>>,
+			to: T::AccountId,
+			amount: BalanceOf<T>,
+			fee: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -106,7 +123,7 @@ pub mod pallet {
 		pub fn set_resource(
 			origin: OriginFor<T>,
 			resource_id: ResourceId,
-			asset: AssetInfo,
+			asset: AssetInfo<T>,
 		) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
 			ResourceToAssetInfo::<T>::insert(resource_id, asset);
@@ -143,11 +160,15 @@ pub mod pallet {
 			match asset_info {
 				None => Err(Error::<T>::InvalidResourceId.into()),
 				// Native token
-				Some(asset_info_inner) if asset_info_inner.asset == None => {
+				Some(AssetInfo { fee: fee, asset: None }) => {
+					Self::deposit_event(Event::TokenBridgeIn(None, who, amount));
 					pallet_balances::Pallet::<T>::mint_into(who, amount)
 				},
 				// pallet assets
-				Some(asset_info_inner) => pallet_assets::Pallet::<T>::mint_into(asset, who, amount),
+				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
+					Self::deposit_event(Event::TokenBridgeIn(Some(asset), who, amount));
+					pallet_assets::Pallet::<T>::mint_into(asset, who, amount)
+				},
 			}
 		}
 		// Return actual amount to target chain after deduction e.g fee
@@ -161,6 +182,7 @@ pub mod pallet {
 				None => Err(Error::<T>::InvalidResourceId.into()),
 				// Native token
 				Some(AssetInfo { fee: fee, asset: None }) => {
+					Self::deposit_event(Event::TokenBridgeOut(None, who, amount, fee));
 					let burn_amount = pallet_balances::Pallet::<T>::burn_from(
 						who,
 						amount,
@@ -174,6 +196,7 @@ pub mod pallet {
 				},
 				// pallet assets
 				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
+					Self::deposit_event(Event::TokenBridgeOut(Some(asset), who, amount, fee));
 					let burn_amount = pallet_assets::Pallet::<T>::burn_from(
 						asset,
 						who,
