@@ -20,12 +20,12 @@ frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 
-pallet-assets-handler = { workspace = true }
 pallet-bridge = { workspace = true }
 
 [dev-dependencies]
 hex-literal = { workspace = true }
 pallet-assets = { workspace = true, features = ["std"] }
+pallet-assets-handler = { workspace = true, features = ["std"] }
 pallet-balances = { workspace = true, features = ["std"] }
 pallet-timestamp = { workspace = true, features = ["std"] }
 
@@ -47,7 +47,6 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "frame-benchmarking?/std",
-    "pallet-assets-handler/std",
     "pallet-bridge/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

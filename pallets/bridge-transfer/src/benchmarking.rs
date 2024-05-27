@@ -60,17 +60,11 @@ benchmarks! {
 		)?;
 
 		let r_id = hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
-		let native_token_asset_info: pallet_assets_handler::AssetInfo<T> = AssetInfo(0u64, None);
-
-		pallet_assets_handler::Pallet::<T>::set_resource(RawOrigin::Root.into(), r_id, native_token_asset_info)?;
 
 	}:_(RawOrigin::Signed(sender),50u32.into(),vec![0u8, 0u8, 0u8, 0u8],dest_chain,r_id)
 
 	transfer{
 		let r_id = hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
-		let native_token_asset_info: pallet_assets_handler::AssetInfo<T> = AssetInfo(0u64, None);
-
-		pallet_assets_handler::Pallet::<T>::set_resource(RawOrigin::Root.into(), r_id, native_token_asset_info)?;
 
 		let sender = PalletId(*b"litry/bg").into_account_truncating();
 

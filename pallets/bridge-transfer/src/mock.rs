@@ -213,7 +213,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| frame_system::Pallet::<Test>::set_block_number(1));
+	ext.execute_with(|| {
+		frame_system::Pallet::<Test>::set_block_number(1);
+		let resource_id = NativeTokenResourceId::get();
+		let native_token_asset_info: AssetInfo<Test> = AssetInfo(0u64, None);
+		// Setup asset handler
+		assert_ok!(AssetsHandler::set_resource(RuntimeOrigin::root(), r_id, asset));
+	});
 	ext
 }
 
