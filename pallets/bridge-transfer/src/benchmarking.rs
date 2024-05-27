@@ -22,7 +22,6 @@
 #![allow(unused)]
 #![allow(clippy::useless_vec)]
 use super::*;
-use bridge::BalanceOf as balance;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{
 	ensure,
@@ -30,7 +29,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::RawOrigin;
-use pallet_bridge::{EnsureOrigin, Get};
+use pallet_bridge::{BalanceOf as balance, EnsureOrigin, Get};
 use sp_arithmetic::traits::Saturating;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::vec;

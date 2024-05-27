@@ -109,6 +109,7 @@ impl bridge::Config for Test {
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
+	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
 	type WeightInfo = ();
 }
@@ -175,7 +176,6 @@ impl pallet_assets_handler::Config for Test {
 }
 
 impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type BridgeOrigin = bridge::EnsureBridge<Test>;
 	type TransferNativeMembers = MembersProvider;
 	type BridgeHandler = AssetsHandler;
