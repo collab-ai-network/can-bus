@@ -24,6 +24,7 @@ use frame_support::{
 };
 use frame_system::{self as system, EnsureRoot};
 use hex_literal::hex;
+use pallet_assets::mock::TestFreezer;
 use pallet_assets_handler::AssetInfo;
 pub use pallet_balances as balances;
 use pallet_bridge as bridge;
@@ -40,6 +41,7 @@ frame_support::construct_runtime!(
 	pub enum Test
 	{
 		System: frame_system,
+		Balances: pallet_balances,
 		Bridge: bridge,
 		BridgeTransfer: bridge_transfer,
 		AssetsHandler: pallet_assets_handler,
@@ -164,6 +166,7 @@ impl pallet_assets::Config for Test {
 
 impl pallet_assets_handler::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type Balance = u64;
 	type BridgeCommitteeOrigin = EnsureRoot<Self::AccountId>;
 	type TreasuryAccount = TreasuryAccount;
 }
@@ -214,7 +217,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			<Test as pallet_assets::Config>::Balance,
 		> = AssetInfo { fee: 0u64, asset: None };
 		// Setup asset handler
-		assert_ok!(AssetsHandler::set_resource(RuntimeOrigin::root(), resource_id, asset));
+		assert_ok!(AssetsHandler::set_resource(RuntimeOrigin::root(), resource_id, native_token_asset_info));
 	});
 	ext
 }
