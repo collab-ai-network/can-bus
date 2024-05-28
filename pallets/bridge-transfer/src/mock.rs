@@ -166,7 +166,6 @@ impl pallet_assets::Config for Test {
 
 impl pallet_assets_handler::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type Balance = u64;
 	type BridgeCommitteeOrigin = EnsureRoot<Self::AccountId>;
 	type TreasuryAccount = TreasuryAccount;
 }

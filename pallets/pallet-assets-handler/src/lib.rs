@@ -30,10 +30,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use pallet_bridge_transfer::BridgeHandler;
-use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, CheckedSub, MaybeSerializeDeserialize},
-	ArithmeticError, DispatchError, FixedPointOperand,
-};
+use sp_runtime::{traits::CheckedSub, ArithmeticError, DispatchError};
 use sp_std::{fmt::Debug, prelude::*};
 type ResourceId = pallet_bridge::ResourceId;
 
@@ -50,7 +47,7 @@ pub mod pallet {
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
-	type BalanceOf<T> = <T as Config>::Balance;
+	type BalanceOf<T> = <T as pallet_bridge::Config>::Balance;
 	type AssetId<T> = <T as pallet_assets::Config>::AssetId;
 
 	#[pallet::pallet]
@@ -60,26 +57,16 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config:
-		frame_system::Config + pallet_balances::Config + pallet_assets::Config
+		frame_system::Config
+		+ pallet_balances::Config
+		+ pallet_assets::Config
+		+ pallet_bridge::Config
 	{
 		/// Overarching event type
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Origin used to administer the pallet
 		type BridgeCommitteeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
-		/// The units in which we record balances.
-		type Balance: Parameter
-			+ Member
-			+ AtLeast32BitUnsigned
-			+ Codec
-			+ Default
-			+ Copy
-			+ MaybeSerializeDeserialize
-			+ Debug
-			+ MaxEncodedLen
-			+ TypeInfo
-			+ FixedPointOperand;
 
 		/// Treasury account to receive assets fee
 		type TreasuryAccount: Get<Self::AccountId>;
