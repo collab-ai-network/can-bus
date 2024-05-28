@@ -22,17 +22,19 @@ use frame_support::{
 	traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, SortedMembers},
 	PalletId,
 };
-use frame_system::{self as system, EnsureRoot, EnsureSignedBy};
+use frame_system::{self as system, EnsureRoot};
 use hex_literal::hex;
 use pallet_assets_handler::AssetInfo;
 pub use pallet_balances as balances;
 use pallet_bridge as bridge;
-use sp_core::H256;
-use sp_runtime::traits::{AccountIdConversion, BlakeTwo256, IdentityLookup};
+use sp_core::{ConstU16, H256};
+use sp_runtime::{
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+	BuildStorage,
+};
 pub const TEST_THRESHOLD: u32 = 2;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test
@@ -64,7 +66,7 @@ impl frame_system::Config for Test {
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();

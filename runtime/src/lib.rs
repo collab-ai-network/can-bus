@@ -19,8 +19,9 @@ use sp_core::{
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable, Get,
-		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, UniqueSaturatedInto, Verify,
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf,
+		Dispatchable, Get, IdentifyAccount, NumberFor, One, PostDispatchInfoOf,
+		UniqueSaturatedInto, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
 	ApplyExtrinsicResult, MultiSignature,
@@ -442,7 +443,9 @@ impl pallet_assets::Config for Runtime {
 }
 
 parameter_types! {
-	pub const TreasuryPalletId: PalletId = PalletId(*b"py/bridge");
+	pub const BridgeChainId: u8 = 2; // TODO: Determine our chain id
+	pub const ProposalLifetime: BlockNumber = 50400; // ~7 days
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/bridg");
 	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
@@ -450,7 +453,7 @@ impl pallet_bridge::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type BridgeCommitteeOrigin = EnsureRoot<AccountId>;
 	type Proposal = RuntimeCall;
-	type BridgeChainId = pallet_bridge::BridgeChainId;
+	type BridgeChainId = BridgeChainId;
 	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
 	type WeightInfo = pallet_bridge::weights::SubstrateWeight<Runtime>;

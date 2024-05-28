@@ -22,7 +22,6 @@ use super::{
 		assert_events, balances, new_test_ext, new_test_ext_initialized, Balances, Bridge,
 		BridgeTransfer, NativeTokenResourceId, ProposalLifetime, RuntimeCall, RuntimeEvent,
 		RuntimeOrigin, Test, TreasuryAccount, ENDOWED_BALANCE, RELAYER_A, RELAYER_B, RELAYER_C,
-		TEST_THRESHOLD,
 	},
 	*,
 };
