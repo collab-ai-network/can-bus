@@ -17,6 +17,7 @@
 #![cfg(test)]
 
 use crate::{self as bridge_transfer, Config};
+use bridge_transfer::BridgeHandler;
 use frame_support::{
 	assert_ok, derive_impl, ord_parameter_types, parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, SortedMembers},
@@ -24,7 +25,7 @@ use frame_support::{
 };
 use frame_system::{self as system, EnsureRoot};
 use hex_literal::hex;
-use pallet_assets::mock::TestFreezer;
+use pallet_assets::TestFreezer;
 use pallet_assets_handler::AssetInfo;
 pub use pallet_balances as balances;
 use pallet_bridge as bridge;
