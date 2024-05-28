@@ -456,7 +456,7 @@ impl pallet_bridge::Config for Runtime {
 	type BridgeChainId = BridgeChainId;
 	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
-	type WeightInfo = pallet_bridge::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = ();
 }
 
 // allow anyone to call transfer_native
@@ -478,7 +478,7 @@ impl SortedMembers<AccountId> for TransferNativeAnyone {
 
 impl pallet_assets_handler::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type BridgeCommitteeOrigin = EnsureRoot;
+	type BridgeCommitteeOrigin = EnsureRoot<AccountId>;
 	type Balance = Balance;
 	type TreasuryAccount = TreasuryAccount;
 }
@@ -487,7 +487,7 @@ impl pallet_bridge_transfer::Config for Runtime {
 	type BridgeOrigin = pallet_bridge::EnsureBridge<Runtime>;
 	type TransferNativeMembers = TransferNativeAnyone;
 	type BridgeHandler = AssetsHandler;
-	type WeightInfo = pallet_bridge_transfer::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
