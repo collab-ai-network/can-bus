@@ -31,13 +31,10 @@ use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use pallet_bridge_transfer::BridgeHandler;
 use sp_runtime::{
-	traits::{
-		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, MaybeSerializeDeserialize,
-		Saturating, StaticLookup, Zero,
-	},
-	ArithmeticError, DispatchError, FixedPointOperand, Perbill, RuntimeDebug, TokenError,
+	traits::{AtLeast32BitUnsigned, CheckedSub, MaybeSerializeDeserialize, StaticLookup},
+	ArithmeticError, DispatchError, FixedPointOperand,
 };
-use sp_std::{fmt::Debug, prelude::*};
+use sp_std::{cmp::PartialOrd, fmt::Debug, prelude::*};
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 type ResourceId = pallet_bridge::ResourceId;
 
@@ -162,6 +159,7 @@ pub mod pallet {
 			+ frame_system::Config
 			+ pallet_assets::Config<Balance = Balance>
 			+ pallet_balances::Config<Balance = Balance>,
+		Balance: CheckedSub + PartialOrd + Copy,
 	{
 		fn prepare_token_bridge_in(
 			resource_id: ResourceId,
@@ -204,7 +202,7 @@ pub mod pallet {
 				Some(AssetInfo { fee: fee, asset: None }) => {
 					Self::deposit_event(Event::TokenBridgeOut {
 						asset_id: None,
-						to: who,
+						to: who.clone(),
 						amount,
 						fee,
 					});
@@ -222,12 +220,12 @@ pub mod pallet {
 				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
 					Self::deposit_event(Event::TokenBridgeOut {
 						asset_id: Some(asset.clone()),
-						to: who,
+						to: who.clone(),
 						amount,
 						fee,
 					});
 					let burn_amount = pallet_assets::Pallet::<T>::burn_from(
-						asset,
+						asset.clone(),
 						&who,
 						amount,
 						Precision::Exact,
