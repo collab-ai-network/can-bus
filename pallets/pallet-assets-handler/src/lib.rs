@@ -23,7 +23,6 @@ use frame_support::{
 	traits::{
 		tokens::{
 			fungible::Mutate as FMutate, fungibles::Mutate as FsMutate, Fortitude, Precision,
-			Preservation,
 		},
 		Currency, ReservableCurrency, StorageVersion,
 	},
@@ -31,7 +30,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use pallet_bridge_transfer::BridgeHandler;
-use sp_runtime::traits::{AtLeast32BitUnsigned, StaticLookup};
+use sp_runtime::traits::{AtLeast32BitUnsigned, FixedPointOperand, StaticLookup};
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 type AssetId<T> = <T as pallet_assets::Config>::AssetId;
