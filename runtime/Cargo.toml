@@ -90,6 +90,7 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-try-runtime?/std",
 
+	"pallet-assets/std",
 	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",

@@ -139,7 +139,6 @@ pub mod pallet {
 		for Pallet<T>
 	where
 		T: Config
-			+ frame_system::Config
 			+ pallet_assets::Config<Balance = BalanceOf<T>>
 			+ pallet_balances::Config<Balance = BalanceOf<T>>,
 	{
