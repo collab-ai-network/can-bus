@@ -6,7 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use codec::{Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use fp_evm::weight_per_gas;
 use fp_rpc::TransactionStatus;
 use pallet_grandpa::AuthorityId as GrandpaId;
@@ -35,7 +35,7 @@ pub use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{
 		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, FindAuthor,
-		KeyOwnerProofSystem, OnFinalize, Randomness, StorageInfo,
+		KeyOwnerProofSystem, OnFinalize, Randomness, SortedMembers, StorageInfo,
 	},
 	weights::{
 		constants::{
@@ -46,7 +46,7 @@ pub use frame_support::{
 	ConsensusEngineId, PalletId, StorageValue,
 };
 pub use frame_system::Call as SystemCall;
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureSigned};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
@@ -403,6 +403,11 @@ impl pallet_halving_mint::Config for Runtime {
 	type OnTokenMinted = ();
 }
 
+/// Charge fee for stored bytes and items.
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+	items as Balance * UNIT + (bytes as Balance) * UNIT
+}
+
 parameter_types! {
 	pub const AssetDeposit: Balance = 1_000_000_000_000_000_000;
 	pub const AssetsStringLimit: u32 = 50;
@@ -428,7 +433,7 @@ impl pallet_assets::Config for Runtime {
 	type StringLimit = AssetsStringLimit;
 	type Freezer = ();
 	type Extra = ();
-	type WeightInfo = weights::pallet_assets::SubstrateWeight<Runtime>;
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 	type RemoveItemsLimit = ConstU32<1000>;
 	type AssetIdParameter = Compact<AssetId>;
 	type CallbackHandle = ();
@@ -443,12 +448,12 @@ parameter_types! {
 
 impl pallet_bridge::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type BridgeCommitteeOrigin = EnsureRoot;
+	type BridgeCommitteeOrigin = EnsureRoot<AccountId>;
 	type Proposal = RuntimeCall;
-	type BridgeChainId = BridgeChainId;
+	type BridgeChainId = pallet_bridge::BridgeChainId;
 	type Currency = Balances;
 	type ProposalLifetime = ProposalLifetime;
-	type WeightInfo = weights::pallet_bridge::WeightInfo<Runtime>;
+	type WeightInfo = pallet_bridge::weights::SubstrateWeight<Runtime>;
 }
 
 // allow anyone to call transfer_native
@@ -476,11 +481,10 @@ impl pallet_assets_handler::Config for Runtime {
 }
 
 impl pallet_bridge_transfer::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type BridgeOrigin = pallet_bridge::EnsureBridge<Runtime>;
 	type TransferNativeMembers = TransferNativeAnyone;
 	type BridgeHandler = AssetsHandler;
-	type WeightInfo = weights::pallet_bridge_transfer::WeightInfo<Runtime>;
+	type WeightInfo = pallet_bridge_transfer::weights::SubstrateWeight<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

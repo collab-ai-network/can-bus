@@ -67,7 +67,7 @@ fn transfer() {
 
 			assert_events(vec![
 				RuntimeEvent::AssetsHandler(pallet_assets_handler::Event::TokenBridgeIn {
-					asset: None,
+					asset_id: None,
 					to: RELAYER_A,
 					amount: 10,
 				}),
@@ -106,7 +106,7 @@ fn transfer_native() {
 			);
 			assert_events(vec![
 				RuntimeEvent::AssetsHandler(pallet_assets_handler::Event::TokenBridgeOut {
-					asset: None,
+					asset_id: None,
 					to: RELAYER_A,
 					amount: 10,
 					fee: 19,
