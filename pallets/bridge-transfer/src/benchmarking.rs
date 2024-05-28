@@ -37,7 +37,7 @@ use sp_std::vec;
 
 const MAXIMUM_ISSURANCE: u32 = 20_000;
 
-type Currency<T> = Currency<<T as frame_system::Config>::AccountId>;
+type BCurrency<T> = Currency<<T as frame_system::Config>::AccountId>;
 
 fn create_user<T: Config + pallet_balances::Config>(
 	string: &'static str,
@@ -46,8 +46,9 @@ fn create_user<T: Config + pallet_balances::Config>(
 ) -> T::AccountId {
 	let user = account(string, n, seed);
 
-	let default_balance = Currency::<T>::minimum_balance().saturating_mul(MAXIMUM_ISSURANCE.into());
-	let _ = Currency::<T>::deposit_creating(&user, default_balance);
+	let default_balance =
+		BCurrency::<T>::minimum_balance().saturating_mul(MAXIMUM_ISSURANCE.into());
+	let _ = BCurrency::<T>::deposit_creating(&user, default_balance);
 	user
 }
 
@@ -74,8 +75,8 @@ benchmarks! {
 		let sender = PalletId(*b"litry/bg").into_account_truncating();
 
 		let default_balance =
-		Currency::<T>::minimum_balance().saturating_mul(MAXIMUM_ISSURANCE.into());
-		let _ = Currency::<T>::deposit_creating(&sender, default_balance);
+		BCurrency::<T>::minimum_balance().saturating_mul(MAXIMUM_ISSURANCE.into());
+		let _ = BCurrency::<T>::deposit_creating(&sender, default_balance);
 
 		let to_account:T::AccountId = create_user::<T>("to",1u32,2u32);
 
