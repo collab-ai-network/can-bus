@@ -109,7 +109,7 @@ impl bridge::Config for Test {
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
-	type Currency = Balances;
+	type Balance = u64;
 	type ProposalLifetime = ProposalLifetime;
 	type WeightInfo = ();
 }

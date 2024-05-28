@@ -34,10 +34,7 @@ pub use weights::WeightInfo;
 pub mod pallet {
 	use crate::weights::WeightInfo;
 	use codec::EncodeLike;
-	use frame_support::{
-		dispatch::GetDispatchInfo,
-		traits::{fungible::Mutate, Currency},
-	};
+	use frame_support::dispatch::GetDispatchInfo;
 	pub use frame_support::{pallet_prelude::*, traits::StorageVersion, PalletId, Parameter};
 	use frame_system::{
 		pallet_prelude::*,
@@ -55,8 +52,7 @@ pub mod pallet {
 	pub type BridgeChainId = u8;
 	pub type DepositNonce = u64;
 	pub type ResourceId = [u8; 32];
-	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	pub type BalanceOf<T> = <T as Config>::Balance;
 
 	/// Helper function to concatenate a chain ID and some bytes to produce a resource ID.
 	/// The common format is (31 bytes unique ID + 1 byte chain ID).
@@ -169,9 +165,18 @@ pub mod pallet {
 		#[pallet::constant]
 		type BridgeChainId: Get<BridgeChainId>;
 
-		/// Currency impl
-		type Currency: Currency<Self::AccountId>
-			+ Mutate<Self::AccountId, Balance = BalanceOf<Self>>;
+		/// The units in which we record balances.
+		type Balance: Parameter
+			+ Member
+			+ AtLeast32BitUnsigned
+			+ Codec
+			+ Default
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ Debug
+			+ MaxEncodedLen
+			+ TypeInfo
+			+ FixedPointOperand;
 
 		#[pallet::constant]
 		type ProposalLifetime: Get<BlockNumberFor<Self>>;

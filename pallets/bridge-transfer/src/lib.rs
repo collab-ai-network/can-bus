@@ -44,9 +44,7 @@ pub mod pallet {
 
 	type ResourceId = bridge::ResourceId;
 
-	type BalanceOf<T> = <<T as bridge::Config>::Currency as Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::Balance;
+	type BalanceOf<T> = <T as bridge::Config>::Balance;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
