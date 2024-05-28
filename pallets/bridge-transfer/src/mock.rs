@@ -217,7 +217,11 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			<Test as pallet_assets::Config>::Balance,
 		> = AssetInfo { fee: 0u64, asset: None };
 		// Setup asset handler
-		assert_ok!(AssetsHandler::set_resource(RuntimeOrigin::root(), resource_id, native_token_asset_info));
+		assert_ok!(AssetsHandler::set_resource(
+			RuntimeOrigin::root(),
+			resource_id,
+			native_token_asset_info
+		));
 	});
 	ext
 }
