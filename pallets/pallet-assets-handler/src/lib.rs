@@ -31,7 +31,7 @@ use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use pallet_bridge_transfer::BridgeHandler;
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, CheckedSub, MaybeSerializeDeserialize, StaticLookup},
+	traits::{AtLeast32BitUnsigned, CheckedSub, MaybeSerializeDeserialize},
 	ArithmeticError, DispatchError, FixedPointOperand,
 };
 use sp_std::{cmp::PartialOrd, fmt::Debug, prelude::*};
