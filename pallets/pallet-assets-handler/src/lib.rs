@@ -163,8 +163,8 @@ pub mod pallet {
 		fn prepare_token_bridge_in(
 			resource_id: ResourceId,
 			who: T::AccountId,
-			amount: Balance,
-		) -> Result<Balance, DispatchError> {
+			amount: BalanceOf<T>,
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let asset_info = Self::resource_to_asset_info(resource_id);
 			match asset_info {
 				None => Err(Error::<T>::InvalidResourceId.into()),
@@ -192,8 +192,8 @@ pub mod pallet {
 		fn prepare_token_bridge_out(
 			resource_id: ResourceId,
 			who: T::AccountId,
-			amount: Balance,
-		) -> Result<Balance, DispatchError> {
+			amount: BalanceOf<T>,
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let asset_info = Self::resource_to_asset_info(resource_id);
 			match asset_info {
 				None => Err(Error::<T>::InvalidResourceId.into()),
