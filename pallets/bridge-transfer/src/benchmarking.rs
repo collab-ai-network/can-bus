@@ -36,7 +36,7 @@ const MAXIMUM_ISSURANCE: u32 = 20_000;
 const NATIVE_TOKEN_RESOURCE_ID: [u8; 32] =
 	hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
 fn create_user<T: Config>(string: &'static str, n: u32, seed: u32) -> T::AccountId {
-	let user = account(string, n, seed);
+	let user: T::AccountId = account(string, n, seed);
 	bridge_transfer::<T>::transfer(
 		RawOrigin::Root.into(),
 		user.clone(),
