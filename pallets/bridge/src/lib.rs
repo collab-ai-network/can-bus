@@ -211,9 +211,6 @@ pub mod pallet {
 		ProposalSucceeded(BridgeChainId, DepositNonce),
 		/// Execution of call failed
 		ProposalFailed(BridgeChainId, DepositNonce),
-		/// TODO: Depreciate
-		/// Update bridge transfer fee
-		FeeUpdated { dest_id: BridgeChainId, fee: BalanceOf<T> },
 	}
 
 	#[pallet::error]
