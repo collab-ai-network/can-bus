@@ -16,22 +16,22 @@
 
 #![cfg(test)]
 
+use crate::{self as bridge_transfer, Config};
 use frame_support::{
-	derive_impl, ord_parameter_types, parameter_types,
+	assert_ok, derive_impl, ord_parameter_types, parameter_types,
 	traits::{ConstU32, ConstU64, SortedMembers},
-	PalletId,
+	AsEnsureOriginWithArg, PalletId,
 };
 use frame_system::{self as system, EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
+use pallet_assets_handler::AssetInfo;
+pub use pallet_balances as balances;
+use pallet_bridge as bridge;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
-
-use crate::{self as bridge_transfer, Config};
-pub use pallet_balances as balances;
-use pallet_bridge as bridge;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -143,11 +143,6 @@ impl SortedMembers<u64> for MembersProvider {
 	}
 }
 
-parameter_types! {
-	pub const TreasuryPalletId: PalletId = PalletId(*b"py/bridge");
-	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
-}
-
 impl pallet_assets::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = u64;
@@ -171,7 +166,7 @@ impl pallet_assets::Config for Test {
 
 impl pallet_assets_handler::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type BridgeCommitteeOrigin = EnsureRoot;
+	type BridgeCommitteeOrigin = EnsureRoot<Self::AccountId>;
 	type TreasuryAccount = TreasuryAccount;
 }
 
@@ -219,7 +214,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		let native_token_asset_info: AssetInfo<
 			<Test as pallet_assets::Config>::AssetId,
 			<Test as pallet_assets::Config>::Balance,
-		> = AssetInfo(0u64, None);
+		> = AssetInfo { fee: 0u64, asset: None };
 		// Setup asset handler
 		assert_ok!(AssetsHandler::set_resource(RuntimeOrigin::root(), r_id, asset));
 	});
@@ -227,8 +222,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 pub fn new_test_ext_initialized(
-	src_id: BridgeChainId,
-	r_id: ResourceId,
+	src_id: bridge::BridgeChainId,
+	r_id: bridge::ResourceId,
 	asset: AssetInfo,
 ) -> sp_io::TestExternalities {
 	let mut t = new_test_ext();

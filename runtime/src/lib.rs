@@ -34,8 +34,8 @@ use frame_support::genesis_builder_helper::{build_config, create_default_config}
 pub use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{
-		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, FindAuthor, KeyOwnerProofSystem,
-		OnFinalize, Randomness, StorageInfo,
+		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, FindAuthor,
+		KeyOwnerProofSystem, OnFinalize, Randomness, StorageInfo,
 	},
 	weights::{
 		constants::{

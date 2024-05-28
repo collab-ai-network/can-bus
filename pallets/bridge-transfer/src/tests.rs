@@ -19,9 +19,9 @@
 use super::{
 	bridge,
 	mock::{
-		assert_events, balances, new_test_ext, Balances, Bridge, BridgeTransfer,
-		NativeTokenResourceId, ProposalLifetime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Test,
-		TreasuryAccount, ENDOWED_BALANCE, MAXIMUM_ISSURANCE, RELAYER_A, RELAYER_B, RELAYER_C,
+		assert_events, balances, new_test_ext, new_test_ext_initialized, Balances, Bridge,
+		BridgeTransfer, NativeTokenResourceId, ProposalLifetime, RuntimeCall, RuntimeEvent,
+		RuntimeOrigin, Test, TreasuryAccount, ENDOWED_BALANCE, RELAYER_A, RELAYER_B, RELAYER_C,
 	},
 	*,
 };
@@ -53,7 +53,7 @@ fn transfer() {
 	let native_token_asset_info: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
 		<Test as pallet_assets::Config>::Balance,
-	> = AssetInfo(0u64, None);
+	> = AssetInfo { fee: 0u64, asset: None };
 
 	new_test_ext_initialized(dest_bridge_id, resource_id, native_token_asset_info).execute_with(
 		|| {
@@ -85,7 +85,7 @@ fn transfer_native() {
 	let native_token_asset_info: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
 		<Test as pallet_assets::Config>::Balance,
-	> = AssetInfo(10u64, None);
+	> = AssetInfo { fee: 10u64, asset: None };
 
 	new_test_ext_initialized(dest_bridge_id, resource_id, native_token_asset_info).execute_with(
 		|| {
@@ -136,7 +136,7 @@ fn mint_overflow() {
 	let native_token_asset_info: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
 		<Test as pallet_assets::Config>::Balance,
-	> = AssetInfo(0u64, None);
+	> = AssetInfo { fee: 0u64, asset: None };
 
 	new_test_ext_initialized(dest_bridge_id, resource_id, native_token_asset_info).execute_with(
 		|| {
@@ -183,7 +183,7 @@ fn create_successful_transfer_proposal() {
 	let native_token_asset_info: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
 		<Test as pallet_assets::Config>::Balance,
-	> = AssetInfo(0u64, None);
+	> = AssetInfo { fee: 0u64, asset: None };
 
 	new_test_ext_initialized(src_id, r_id, native_token_asset_info).execute_with(|| {
 		let prop_id = 1;
@@ -249,6 +249,7 @@ fn create_successful_transfer_proposal() {
 			RuntimeEvent::Bridge(bridge::Event::ProposalApproved(src_id, prop_id)),
 			RuntimeEvent::Balances(balances::Event::Minted { who: RELAYER_A, amount: 10 }),
 			RuntimeEvent::BridgeTransfer(pallet_assets_handler::Event::TokenBridgeIn {
+				asset_id: None,
 				to: RELAYER_A,
 				amount: 10,
 			}),
