@@ -24,7 +24,7 @@ use frame_support::{
 		tokens::{
 			fungible::Mutate as FMutate, fungibles::Mutate as FsMutate, Fortitude, Precision,
 		},
-		Currency, ReservableCurrency, StorageVersion,
+		StorageVersion,
 	},
 };
 use frame_system::pallet_prelude::*;
@@ -36,14 +36,13 @@ use sp_runtime::{
 };
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
-type AssetId<T> = <T as pallet_assets::Config>::AssetId;
 type ResourceId = pallet_bridge::ResourceId;
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, TypeInfo)]
-pub struct AssetInfo<T: pallet_assets::Config> {
+#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
+pub struct AssetInfo<AssetId> {
 	fee: T::Balance,
 	// None for native token
-	asset: Option<AssetId<T>>,
+	asset: Option<AssetId>,
 }
 
 #[frame_support::pallet]
@@ -53,6 +52,7 @@ pub mod pallet {
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 	type BalanceOf<T> = <T as Config>::Balance;
+	type AssetId<T> = <T as pallet_assets::Config>::AssetId;
 
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
@@ -88,7 +88,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn resource_to_asset_info)]
 	pub type ResourceToAssetInfo<T: Config> =
-		StorageMap<_, Twox64Concat, ResourceId, AssetInfo<T>, OptionQuery>;
+		StorageMap<_, Twox64Concat, ResourceId, AssetInfo<AssetId<T>>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -96,7 +96,7 @@ pub mod pallet {
 		// asset id = None means native token
 		ResourceUpdated {
 			resource_id: ResourceId,
-			asset: AssetInfo<T>,
+			asset: AssetInfo<AssetId<T>>,
 		},
 		ResourceRemoved {
 			resource_id: ResourceId,
@@ -129,10 +129,10 @@ pub mod pallet {
 		pub fn set_resource(
 			origin: OriginFor<T>,
 			resource_id: ResourceId,
-			asset: AssetInfo<T>,
+			asset: AssetInfo<AssetId<T>>,
 		) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
-			ResourceToAssetInfo::<T>::insert(resource_id, asset);
+			ResourceToAssetInfo::<T>::insert(resource_id, asset.clone());
 			Self::deposit_event(Event::ResourceUpdated { resource_id, asset });
 			Ok(())
 		}
@@ -169,7 +169,7 @@ pub mod pallet {
 				// Native token
 				Some(AssetInfo { fee: fee, asset: None }) => {
 					Self::deposit_event(Event::TokenBridgeIn { asset_id: None, to: who, amount });
-					pallet_balances::Pallet::<T>::mint_into(who, amount)
+					pallet_balances::Pallet::<T>::mint_into(&who, amount)
 				},
 				// pallet assets
 				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
@@ -178,7 +178,7 @@ pub mod pallet {
 						to: who,
 						amount,
 					});
-					pallet_assets::Pallet::<T>::mint_into(asset, who, amount)
+					pallet_assets::Pallet::<T>::mint_into(asset, &who, amount)
 				},
 			}
 		}
@@ -200,7 +200,7 @@ pub mod pallet {
 						fee,
 					});
 					let burn_amount = pallet_balances::Pallet::<T>::burn_from(
-						who,
+						&who,
 						amount,
 						Precision::Exact,
 						Fortitude::Polite,
@@ -219,7 +219,7 @@ pub mod pallet {
 					});
 					let burn_amount = pallet_assets::Pallet::<T>::burn_from(
 						asset,
-						who,
+						&who,
 						amount,
 						Precision::Exact,
 						Fortitude::Polite,
