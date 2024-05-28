@@ -30,7 +30,10 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use pallet_bridge_transfer::BridgeHandler;
-use sp_runtime::traits::{AtLeast32BitUnsigned, FixedPointOperand, StaticLookup};
+use sp_runtime::{
+	traits::{AtLeast32BitUnsigned, StaticLookup},
+	FixedPointOperand,
+};
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 type AssetId<T> = <T as pallet_assets::Config>::AssetId;
