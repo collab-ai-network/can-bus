@@ -17,7 +17,7 @@
 //! A pallet for temporary fix of onchain accountInfo.
 //! No storage for this pallet and it should be removed right after fixing.
 #![cfg_attr(not(feature = "std"), no_std)]
-
+use codec::{Codec, MaxEncodedLen};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -31,9 +31,13 @@ use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use pallet_bridge_transfer::BridgeHandler;
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, StaticLookup},
-	FixedPointOperand,
+	traits::{
+		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, MaybeSerializeDeserialize,
+		Saturating, StaticLookup, Zero,
+	},
+	ArithmeticError, DispatchError, FixedPointOperand, Perbill, RuntimeDebug, TokenError,
 };
+use sp_std::fmt::Debug;
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 type ResourceId = pallet_bridge::ResourceId;
@@ -232,7 +236,7 @@ pub mod pallet {
 					)?;
 					ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
 					pallet_assets::Pallet::<T>::mint_into(asset, &T::TreasuryAccount::get(), fee)?;
-					Ok(burn_amount - fee)
+					Ok(burn_amount.checked_sub(&fee).ok_or(ArithmeticError::Overflow)?)
 				},
 			}
 		}
