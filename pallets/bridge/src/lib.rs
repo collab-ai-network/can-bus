@@ -47,7 +47,7 @@ pub mod pallet {
 		traits::{AccountIdConversion, Dispatchable},
 		SaturatedConversion,
 	};
-	use sp_std::prelude::*;
+	use sp_std::{prelude::*, vec};
 
 	const DEFAULT_RELAYER_THRESHOLD: u32 = 1;
 	const MODULE_ID: PalletId = PalletId(*b"litry/bg");

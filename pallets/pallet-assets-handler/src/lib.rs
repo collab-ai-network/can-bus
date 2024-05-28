@@ -34,7 +34,7 @@ use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedSub, MaybeSerializeDeserialize},
 	ArithmeticError, DispatchError, FixedPointOperand,
 };
-use sp_std::{cmp::PartialOrd, fmt::Debug, prelude::*};
+use sp_std::{fmt::Debug, prelude::*};
 type ResourceId = pallet_bridge::ResourceId;
 
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
