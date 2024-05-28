@@ -26,20 +26,22 @@ use crate::Pallet as bridge_transfer;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::{ensure, traits::SortedMembers, PalletId};
 use frame_system::RawOrigin;
+use hex_literal::hex;
 use pallet_bridge::{EnsureOrigin, Get};
 use sp_arithmetic::traits::Saturating;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::vec;
 
 const MAXIMUM_ISSURANCE: u32 = 20_000;
-
+const NATIVE_TOKEN_RESOURCE_ID: [u8; 32] =
+	hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
 fn create_user<T: Config>(string: &'static str, n: u32, seed: u32) -> T::AccountId {
 	let user = account(string, n, seed);
 	bridge_transfer::<T>::transfer(
 		RawOrigin::Root.into(),
 		user,
 		(n * MAXIMUM_ISSURANCE).into(),
-		crate::mock::NativeTokenResourceId::get(),
+		NATIVE_TOKEN_RESOURCE_ID,
 	);
 
 	user
@@ -58,12 +60,12 @@ benchmarks! {
 			dest_chain,
 		)?;
 
-		let r_id = crate::mock::NativeTokenResourceId::get();
+		let r_id = NATIVE_TOKEN_RESOURCE_ID;
 
 	}:_(RawOrigin::Signed(sender),50u32.into(),vec![0u8, 0u8, 0u8, 0u8],dest_chain,r_id)
 
 	transfer{
-		let r_id = crate::mock::NativeTokenResourceId::get();
+		let r_id = NATIVE_TOKEN_RESOURCE_ID;
 
 		let sender = PalletId(*b"litry/bg").into_account_truncating();
 
