@@ -35,7 +35,6 @@ use sp_runtime::{
 	ArithmeticError, DispatchError, FixedPointOperand,
 };
 use sp_std::{cmp::PartialOrd, fmt::Debug, prelude::*};
-type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 type ResourceId = pallet_bridge::ResourceId;
 
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
@@ -199,7 +198,7 @@ pub mod pallet {
 			match asset_info {
 				None => Err(Error::<T>::InvalidResourceId.into()),
 				// Native token
-				Some(AssetInfo { fee: fee, asset: None }) => {
+				Some(AssetInfo { fee, asset: None }) => {
 					Self::deposit_event(Event::TokenBridgeOut {
 						asset_id: None,
 						to: who.clone(),
@@ -217,7 +216,7 @@ pub mod pallet {
 					Ok(burn_amount - fee)
 				},
 				// pallet assets
-				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
+				Some(AssetInfo { fee, asset: Some(asset) }) => {
 					Self::deposit_event(Event::TokenBridgeOut {
 						asset_id: Some(asset.clone()),
 						to: who.clone(),
