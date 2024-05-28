@@ -135,8 +135,7 @@ pub mod pallet {
 		}
 	}
 
-	impl<T> BridgeHandler<<T as pallet_balances::Config>::Balance, T::AccountId, ResourceId>
-		for Pallet<T>
+	impl<T> BridgeHandler<BalanceOf<T>, T::AccountId, ResourceId> for Pallet<T>
 	where
 		T: Config
 			+ pallet_assets::Config<Balance = BalanceOf<T>>
