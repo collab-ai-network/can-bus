@@ -25,7 +25,6 @@ use frame_support::{
 };
 use frame_system::{self as system, EnsureRoot};
 use hex_literal::hex;
-use pallet_assets::TestFreezer;
 use pallet_assets_handler::AssetInfo;
 pub use pallet_balances as balances;
 use pallet_bridge as bridge;
@@ -158,7 +157,7 @@ impl pallet_assets::Config for Test {
 	type MetadataDepositPerByte = ConstU64<1>;
 	type ApprovalDeposit = ConstU64<1>;
 	type StringLimit = ConstU32<50>;
-	type Freezer = TestFreezer;
+	type Freezer = ();
 	type WeightInfo = ();
 	type CallbackHandle = ();
 	type Extra = ();

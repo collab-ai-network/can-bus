@@ -152,13 +152,13 @@ pub mod pallet {
 		}
 	}
 
-	impl<T, Balance> BridgeHandler<Balance, T::AccountId, ResourceId> for Pallet<T>
+	impl<T> BridgeHandler<<T as pallet_balances::Config>::Balance, T::AccountId, ResourceId>
+		for Pallet<T>
 	where
-		T: Config<Balance = Balance>
+		T: Config
 			+ frame_system::Config
-			+ pallet_assets::Config<Balance = Balance>
-			+ pallet_balances::Config<Balance = Balance>,
-		Balance: CheckedSub + PartialOrd + Copy,
+			+ pallet_assets::Config<Balance = BalanceOf<T>>
+			+ pallet_balances::Config<Balance = BalanceOf<T>>,
 	{
 		fn prepare_token_bridge_in(
 			resource_id: ResourceId,

@@ -1,6 +1,6 @@
 use canbus_runtime::{
-	AccountId, AuraConfig, Balance, BalancesConfig, EVMChainIdConfig, GrandpaConfig, HalvingMint,
-	RuntimeGenesisConfig, Signature, SudoConfig, SystemConfig, UNIT, WASM_BINARY,
+	AccountId, AssetsConfig, AuraConfig, Balance, BalancesConfig, EVMChainIdConfig, GrandpaConfig,
+	HalvingMint, RuntimeGenesisConfig, Signature, SudoConfig, SystemConfig, UNIT, WASM_BINARY,
 };
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
@@ -119,5 +119,6 @@ fn build_genesis(
 		evm: Default::default(),
 		base_fee: Default::default(),
 		halving_mint: Default::default(),
+		assets: Default::default(),
 	}
 }
