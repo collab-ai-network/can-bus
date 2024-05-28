@@ -22,33 +22,26 @@
 #![allow(unused)]
 #![allow(clippy::useless_vec)]
 use super::*;
+use crate::Pallet as bridge_transfer;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
-use frame_support::{
-	ensure,
-	traits::{Currency, SortedMembers},
-	PalletId,
-};
+use frame_support::{ensure, traits::SortedMembers, PalletId};
 use frame_system::RawOrigin;
-use hex_literal::hex;
-use pallet_bridge::{BalanceOf as balance, EnsureOrigin, Get};
+use pallet_bridge::{EnsureOrigin, Get};
 use sp_arithmetic::traits::Saturating;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::vec;
 
 const MAXIMUM_ISSURANCE: u32 = 20_000;
 
-type BCurrency<T> = Currency<<T as frame_system::Config>::AccountId>;
-
-fn create_user<T: Config + pallet_balances::Config>(
-	string: &'static str,
-	n: u32,
-	seed: u32,
-) -> T::AccountId {
+fn create_user<T: Config>(string: &'static str, n: u32, seed: u32) -> T::AccountId {
 	let user = account(string, n, seed);
+	bridge_transfer::<T>::transfer(
+		RawOrigin::Root.into(),
+		user,
+		(n * MAXIMUM_ISSURANCE).into(),
+		crate::mock::NativeTokenResourceId::get(),
+	);
 
-	let default_balance =
-		BCurrency::<T>::minimum_balance().saturating_mul(MAXIMUM_ISSURANCE.into());
-	let _ = BCurrency::<T>::deposit_creating(&user, default_balance);
 	user
 }
 
@@ -65,22 +58,18 @@ benchmarks! {
 			dest_chain,
 		)?;
 
-		let r_id = hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
+		let r_id = crate::mock::NativeTokenResourceId::get();
 
 	}:_(RawOrigin::Signed(sender),50u32.into(),vec![0u8, 0u8, 0u8, 0u8],dest_chain,r_id)
 
 	transfer{
-		let r_id = hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
+		let r_id = crate::mock::NativeTokenResourceId::get();
 
 		let sender = PalletId(*b"litry/bg").into_account_truncating();
 
-		let default_balance =
-		BCurrency::<T>::minimum_balance().saturating_mul(MAXIMUM_ISSURANCE.into());
-		let _ = BCurrency::<T>::deposit_creating(&sender, default_balance);
-
 		let to_account:T::AccountId = create_user::<T>("to",1u32,2u32);
 
-	}:_(RawOrigin::Signed(sender),to_account,50u32.into(),r_id)
+	}:_(RawOrigin::Signed(sender),to_account,50u32.into(), r_id)
 }
 
 impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
