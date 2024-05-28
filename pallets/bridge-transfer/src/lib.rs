@@ -33,7 +33,7 @@ pub mod pallet {
 	use crate::weights::WeightInfo;
 	use frame_support::{
 		pallet_prelude::*,
-		traits::{Currency, SortedMembers, StorageVersion},
+		traits::{SortedMembers, StorageVersion},
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;

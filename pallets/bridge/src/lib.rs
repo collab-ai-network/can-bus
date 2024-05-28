@@ -41,9 +41,7 @@ pub mod pallet {
 		{self as system},
 	};
 	use sp_runtime::{
-		traits::{
-			AccountIdConversion, AtLeast32BitUnsigned, Dispatchable, MaybeSerializeDeserialize,
-		},
+		traits::{AccountIdConversion, AtLeast32BitUnsigned, Dispatchable},
 		FixedPointOperand, SaturatedConversion,
 	};
 

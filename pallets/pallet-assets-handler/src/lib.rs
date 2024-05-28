@@ -17,7 +17,6 @@
 //! A pallet for temporary fix of onchain accountInfo.
 //! No storage for this pallet and it should be removed right after fixing.
 #![cfg_attr(not(feature = "std"), no_std)]
-use codec::{Codec, MaxEncodedLen};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -64,9 +63,6 @@ pub mod pallet {
 	{
 		/// Overarching event type
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
-		/// Origin used to administer the pallet
-		type BridgeCommitteeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		/// Treasury account to receive assets fee
 		type TreasuryAccount: Get<Self::AccountId>;
@@ -119,7 +115,7 @@ pub mod pallet {
 			resource_id: ResourceId,
 			asset: AssetInfo<AssetId<T>, BalanceOf<T>>,
 		) -> DispatchResult {
-			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
+			<T as pallet_bridge::Config>::BridgeCommitteeOrigin::ensure_origin(origin)?;
 			ResourceToAssetInfo::<T>::insert(resource_id, asset.clone());
 			Self::deposit_event(Event::ResourceUpdated { resource_id, asset });
 			Ok(())
@@ -132,7 +128,7 @@ pub mod pallet {
 		#[pallet::call_index(1)]
 		#[pallet::weight({1000})]
 		pub fn remove_resource(origin: OriginFor<T>, resource_id: ResourceId) -> DispatchResult {
-			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
+			<T as pallet_bridge::Config>::BridgeCommitteeOrigin::ensure_origin(origin)?;
 			ResourceToAssetInfo::<T>::remove(resource_id);
 			Self::deposit_event(Event::ResourceRemoved { resource_id });
 			Ok(())
