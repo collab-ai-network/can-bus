@@ -70,12 +70,14 @@ pub mod pallet {
 		type BridgeCommitteeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		/// The units in which we record balances.
-		type Balance: Member
-			+ Parameter
+		type Balance: Parameter
+			+ Member
 			+ AtLeast32BitUnsigned
+			+ Codec
 			+ Default
 			+ Copy
 			+ MaybeSerializeDeserialize
+			+ Debug
 			+ MaxEncodedLen
 			+ TypeInfo
 			+ FixedPointOperand;
@@ -88,7 +90,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn resource_to_asset_info)]
 	pub type ResourceToAssetInfo<T: Config> =
-		StorageMap<_, Twox64Concat, ResourceId, AssetInfo<AssetId<T>, T::Balance>, OptionQuery>;
+		StorageMap<_, Twox64Concat, ResourceId, AssetInfo<AssetId<T>, BalanceOf<T>>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -96,7 +98,7 @@ pub mod pallet {
 		// asset id = None means native token
 		ResourceUpdated {
 			resource_id: ResourceId,
-			asset: AssetInfo<AssetId<T>, T::Balance>,
+			asset: AssetInfo<AssetId<T>, BalanceOf<T>>,
 		},
 		ResourceRemoved {
 			resource_id: ResourceId,
@@ -129,7 +131,7 @@ pub mod pallet {
 		pub fn set_resource(
 			origin: OriginFor<T>,
 			resource_id: ResourceId,
-			asset: AssetInfo<AssetId<T>, T::Balance>,
+			asset: AssetInfo<AssetId<T>, BalanceOf<T>>,
 		) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
 			ResourceToAssetInfo::<T>::insert(resource_id, asset.clone());
@@ -167,15 +169,19 @@ pub mod pallet {
 			match asset_info {
 				None => Err(Error::<T>::InvalidResourceId.into()),
 				// Native token
-				Some(AssetInfo { fee: fee, asset: None }) => {
-					Self::deposit_event(Event::TokenBridgeIn { asset_id: None, to: who, amount });
+				Some(AssetInfo { fee: _, asset: None }) => {
+					Self::deposit_event(Event::TokenBridgeIn {
+						asset_id: None,
+						to: who.clone(),
+						amount,
+					});
 					pallet_balances::Pallet::<T>::mint_into(&who, amount)
 				},
 				// pallet assets
-				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
+				Some(AssetInfo { fee: _, asset: Some(asset) }) => {
 					Self::deposit_event(Event::TokenBridgeIn {
-						asset_id: Some(asset),
-						to: who,
+						asset_id: Some(asset.clone()),
+						to: who.clone(),
 						amount,
 					});
 					pallet_assets::Pallet::<T>::mint_into(asset, &who, amount)
@@ -212,7 +218,7 @@ pub mod pallet {
 				// pallet assets
 				Some(AssetInfo { fee: fee, asset: Some(asset) }) => {
 					Self::deposit_event(Event::TokenBridgeOut {
-						asset_id: Some(asset),
+						asset_id: Some(asset.clone()),
 						to: who,
 						amount,
 						fee,
