@@ -1,6 +1,6 @@
 use canbus_runtime::{
-	AccountId, AssetsConfig, AuraConfig, Balance, BalancesConfig, EVMChainIdConfig, GrandpaConfig,
-	HalvingMint, RuntimeGenesisConfig, Signature, SudoConfig, SystemConfig, UNIT, WASM_BINARY,
+	AccountId, AuraConfig, Balance, BalancesConfig, EVMChainIdConfig, GrandpaConfig, HalvingMint,
+	RuntimeGenesisConfig, Signature, SudoConfig, SystemConfig, UNIT, WASM_BINARY,
 };
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
