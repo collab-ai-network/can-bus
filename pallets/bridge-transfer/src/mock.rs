@@ -19,8 +19,8 @@
 use crate::{self as bridge_transfer, Config};
 use frame_support::{
 	assert_ok, derive_impl, ord_parameter_types, parameter_types,
-	traits::{ConstU32, ConstU64, SortedMembers},
-	AsEnsureOriginWithArg, PalletId,
+	traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, SortedMembers},
+	PalletId,
 };
 use frame_system::{self as system, EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
@@ -28,11 +28,8 @@ use pallet_assets_handler::AssetInfo;
 pub use pallet_balances as balances;
 use pallet_bridge as bridge;
 use sp_core::H256;
-use sp_runtime::{
-	testing::Header,
-	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-};
-
+use sp_runtime::traits::{AccountIdConversion, BlakeTwo256, IdentityLookup};
+pub const TEST_THRESHOLD: u32 = 2;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -216,7 +213,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			<Test as pallet_assets::Config>::Balance,
 		> = AssetInfo { fee: 0u64, asset: None };
 		// Setup asset handler
-		assert_ok!(AssetsHandler::set_resource(RuntimeOrigin::root(), r_id, asset));
+		assert_ok!(AssetsHandler::set_resource(RuntimeOrigin::root(), resource_id, asset));
 	});
 	ext
 }
@@ -224,7 +221,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 pub fn new_test_ext_initialized(
 	src_id: bridge::BridgeChainId,
 	r_id: bridge::ResourceId,
-	asset: AssetInfo,
+	asset: AssetInfo<
+		<Test as pallet_assets::Config>::AssetId,
+		<Test as pallet_assets::Config>::Balance,
+	>,
 ) -> sp_io::TestExternalities {
 	let mut t = new_test_ext();
 	t.execute_with(|| {

@@ -22,6 +22,7 @@ use super::{
 		assert_events, balances, new_test_ext, new_test_ext_initialized, Balances, Bridge,
 		BridgeTransfer, NativeTokenResourceId, ProposalLifetime, RuntimeCall, RuntimeEvent,
 		RuntimeOrigin, Test, TreasuryAccount, ENDOWED_BALANCE, RELAYER_A, RELAYER_B, RELAYER_C,
+		TEST_THRESHOLD,
 	},
 	*,
 };
@@ -29,8 +30,6 @@ use frame_support::{assert_noop, assert_ok};
 use hex_literal::hex;
 use pallet_assets_handler::AssetInfo;
 use sp_runtime::ArithmeticError;
-
-const TEST_THRESHOLD: u32 = 2;
 
 fn make_transfer_proposal(to: u64, amount: u64) -> RuntimeCall {
 	let rid = NativeTokenResourceId::get();
@@ -68,7 +67,7 @@ fn transfer() {
 
 			assert_events(vec![
 				RuntimeEvent::AssetsHandler(pallet_assets_handler::Event::TokenBridgeIn {
-					None,
+					asset: None,
 					to: RELAYER_A,
 					amount: 10,
 				}),
@@ -107,7 +106,7 @@ fn transfer_native() {
 			);
 			assert_events(vec![
 				RuntimeEvent::AssetsHandler(pallet_assets_handler::Event::TokenBridgeOut {
-					None,
+					asset: None,
 					to: RELAYER_A,
 					amount: 10,
 					fee: 19,
