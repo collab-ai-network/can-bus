@@ -76,7 +76,7 @@ pub mod pallet {
 		/// Transfers some amount of non-native token to some recipient on a (whitelisted)
 		/// destination chain.
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as Config>::WeightInfo::transfer_native())]
+		#[pallet::weight(<T as Config>::WeightInfo::transfer_assets())]
 		#[transactional]
 		pub fn transfer_assets(
 			origin: OriginFor<T>,
@@ -98,6 +98,7 @@ pub mod pallet {
 		}
 
 		/// Executes a simple currency transfer using the bridge account as the source
+		/// Should only be called by bridge pallet
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer())]
 		#[transactional]
