@@ -39,7 +39,7 @@ fn create_user<T: Config>(string: &'static str, n: u32, seed: u32) -> T::Account
 	let user = account(string, n, seed);
 	bridge_transfer::<T>::transfer(
 		RawOrigin::Root.into(),
-		user,
+		user.clone(),
 		(n * MAXIMUM_ISSURANCE).into(),
 		NATIVE_TOKEN_RESOURCE_ID,
 	);
