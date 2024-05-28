@@ -39,8 +39,8 @@ type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup
 type ResourceId = pallet_bridge::ResourceId;
 
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
-pub struct AssetInfo<AssetId> {
-	fee: T::Balance,
+pub struct AssetInfo<AssetId, Balance> {
+	fee: Balance,
 	// None for native token
 	asset: Option<AssetId>,
 }
@@ -88,7 +88,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn resource_to_asset_info)]
 	pub type ResourceToAssetInfo<T: Config> =
-		StorageMap<_, Twox64Concat, ResourceId, AssetInfo<AssetId<T>>, OptionQuery>;
+		StorageMap<_, Twox64Concat, ResourceId, AssetInfo<AssetId<T>, T::Balance>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -96,7 +96,7 @@ pub mod pallet {
 		// asset id = None means native token
 		ResourceUpdated {
 			resource_id: ResourceId,
-			asset: AssetInfo<AssetId<T>>,
+			asset: AssetInfo<AssetId<T>, T::Balance>,
 		},
 		ResourceRemoved {
 			resource_id: ResourceId,
@@ -129,7 +129,7 @@ pub mod pallet {
 		pub fn set_resource(
 			origin: OriginFor<T>,
 			resource_id: ResourceId,
-			asset: AssetInfo<AssetId<T>>,
+			asset: AssetInfo<AssetId<T>, T::Balance>,
 		) -> DispatchResult {
 			T::BridgeCommitteeOrigin::ensure_origin(origin)?;
 			ResourceToAssetInfo::<T>::insert(resource_id, asset.clone());

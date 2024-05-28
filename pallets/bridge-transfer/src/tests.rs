@@ -50,8 +50,10 @@ fn constant_equality() {
 fn transfer() {
 	let dest_bridge_id: bridge::BridgeChainId = 0;
 	let resource_id = NativeTokenResourceId::get();
-	let native_token_asset_info: AssetInfo<<Test as pallet_assets::Config>::AssetId> =
-		AssetInfo(0u64, None);
+	let native_token_asset_info: AssetInfo<
+		<Test as pallet_assets::Config>::AssetId,
+		<Test as pallet_assets::Config>::Balance,
+	> = AssetInfo(0u64, None);
 
 	new_test_ext_initialized(dest_bridge_id, resource_id, native_token_asset_info).execute_with(
 		|| {
@@ -80,8 +82,10 @@ fn transfer() {
 fn transfer_native() {
 	let dest_bridge_id: bridge::BridgeChainId = 0;
 	let resource_id = NativeTokenResourceId::get();
-	let native_token_asset_info: AssetInfo<<Test as pallet_assets::Config>::AssetId> =
-		AssetInfo(10u64, None);
+	let native_token_asset_info: AssetInfo<
+		<Test as pallet_assets::Config>::AssetId,
+		<Test as pallet_assets::Config>::Balance,
+	> = AssetInfo(10u64, None);
 
 	new_test_ext_initialized(dest_bridge_id, resource_id, native_token_asset_info).execute_with(
 		|| {
@@ -129,8 +133,10 @@ fn transfer_native() {
 fn mint_overflow() {
 	let dest_bridge_id: bridge::BridgeChainId = 0;
 	let resource_id = NativeTokenResourceId::get();
-	let native_token_asset_info: AssetInfo<<Test as pallet_assets::Config>::AssetId> =
-		AssetInfo(0u64, None);
+	let native_token_asset_info: AssetInfo<
+		<Test as pallet_assets::Config>::AssetId,
+		<Test as pallet_assets::Config>::Balance,
+	> = AssetInfo(0u64, None);
 
 	new_test_ext_initialized(dest_bridge_id, resource_id, native_token_asset_info).execute_with(
 		|| {
@@ -174,8 +180,10 @@ fn transfer_to_regular_account() {
 fn create_successful_transfer_proposal() {
 	let src_id: bridge::BridgeChainId = 0;
 	let r_id = NativeTokenResourceId::get();
-	let native_token_asset_info: AssetInfo<<Test as pallet_assets::Config>::AssetId> =
-		AssetInfo(0u64, None);
+	let native_token_asset_info: AssetInfo<
+		<Test as pallet_assets::Config>::AssetId,
+		<Test as pallet_assets::Config>::Balance,
+	> = AssetInfo(0u64, None);
 
 	new_test_ext_initialized(src_id, r_id, native_token_asset_info).execute_with(|| {
 		let prop_id = 1;
