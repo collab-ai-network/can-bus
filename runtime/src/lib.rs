@@ -439,7 +439,7 @@ impl pallet_assets::Config for Runtime {
 	type AssetIdParameter = Compact<AssetId>;
 	type CallbackHandle = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = astar_primitives::benchmarks::AssetsBenchmarkHelper;
+	type BenchmarkHelper = ();
 }
 
 parameter_types! {
