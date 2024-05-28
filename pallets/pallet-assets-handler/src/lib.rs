@@ -37,8 +37,7 @@ use sp_runtime::{
 	},
 	ArithmeticError, DispatchError, FixedPointOperand, Perbill, RuntimeDebug, TokenError,
 };
-use sp_std::fmt::Debug;
-
+use sp_std::{fmt::Debug, prelude::*};
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 type ResourceId = pallet_bridge::ResourceId;
 
