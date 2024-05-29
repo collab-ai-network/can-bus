@@ -134,92 +134,92 @@ pub mod pallet {
 			Ok(())
 		}
 	}
+}
 
-	impl<T, B, A> BridgeHandler<B, A, ResourceId> for Pallet<T>
-	where
-		T: Config
-			+ frame_system::Config<AccountId = A>
-			+ pallet_bridge::Config<Balance = B>
-			+ pallet_assets::Config<Balance = B>
-			+ pallet_balances::Config<Balance = B>,
-		B: Copy + FixedPointOperand + CheckedSub,
-		A: Clone,
-	{
-		fn prepare_token_bridge_in(
-			resource_id: ResourceId,
-			who: A,
-			amount: B,
-		) -> Result<B, DispatchError> {
-			let asset_info = Self::resource_to_asset_info(resource_id);
-			match asset_info {
-				None => Err(Error::<T>::InvalidResourceId.into()),
-				// Native token
-				Some(AssetInfo { fee: _, asset: None }) => {
-					Self::deposit_event(Event::TokenBridgeIn {
-						asset_id: None,
-						to: who.clone(),
-						amount,
-					});
-					pallet_balances::Pallet::<T>::mint_into(&who, amount)
-				},
-				// pallet assets
-				Some(AssetInfo { fee: _, asset: Some(asset) }) => {
-					Self::deposit_event(Event::TokenBridgeIn {
-						asset_id: Some(asset.clone()),
-						to: who.clone(),
-						amount,
-					});
-					pallet_assets::Pallet::<T>::mint_into(asset, &who, amount)
-				},
-			}
+impl<T, B, A> BridgeHandler<B, A, ResourceId> for Pallet<T>
+where
+	T: Config
+		+ frame_system::Config<AccountId = A>
+		+ pallet_bridge::Config<Balance = B>
+		+ pallet_assets::Config<Balance = B>
+		+ pallet_balances::Config<Balance = B>,
+	B: Copy + FixedPointOperand + CheckedSub,
+	A: Clone,
+{
+	fn prepare_token_bridge_in(
+		resource_id: ResourceId,
+		who: A,
+		amount: B,
+	) -> Result<B, DispatchError> {
+		let asset_info = Self::resource_to_asset_info(resource_id);
+		match asset_info {
+			None => Err(Error::<T>::InvalidResourceId.into()),
+			// Native token
+			Some(AssetInfo { fee: _, asset: None }) => {
+				Self::deposit_event(Event::TokenBridgeIn {
+					asset_id: None,
+					to: who.clone(),
+					amount,
+				});
+				pallet_balances::Pallet::<T>::mint_into(&who, amount)
+			},
+			// pallet assets
+			Some(AssetInfo { fee: _, asset: Some(asset) }) => {
+				Self::deposit_event(Event::TokenBridgeIn {
+					asset_id: Some(asset.clone()),
+					to: who.clone(),
+					amount,
+				});
+				pallet_assets::Pallet::<T>::mint_into(asset, &who, amount)
+			},
 		}
-		// Return actual amount to target chain after deduction e.g fee
-		fn prepare_token_bridge_out(
-			resource_id: ResourceId,
-			who: A,
-			amount: B,
-		) -> Result<B, DispatchError> {
-			let asset_info = Self::resource_to_asset_info(resource_id);
-			match asset_info {
-				None => Err(Error::<T>::InvalidResourceId.into()),
-				// Native token
-				Some(AssetInfo { fee, asset: None }) => {
-					Self::deposit_event(Event::TokenBridgeOut {
-						asset_id: None,
-						to: who.clone(),
-						amount,
-						fee,
-					});
-					let burn_amount = pallet_balances::Pallet::<T>::burn_from(
-						&who,
-						amount,
-						Precision::Exact,
-						Fortitude::Polite,
-					)?;
-					ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
-					pallet_balances::Pallet::<T>::mint_into(&T::TreasuryAccount::get(), fee)?;
-					Ok(burn_amount.checked_sub(&fee).ok_or(ArithmeticError::Overflow)?)
-				},
-				// pallet assets
-				Some(AssetInfo { fee, asset: Some(asset) }) => {
-					Self::deposit_event(Event::TokenBridgeOut {
-						asset_id: Some(asset.clone()),
-						to: who.clone(),
-						amount,
-						fee,
-					});
-					let burn_amount = pallet_assets::Pallet::<T>::burn_from(
-						asset.clone(),
-						&who,
-						amount,
-						Precision::Exact,
-						Fortitude::Polite,
-					)?;
-					ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
-					pallet_assets::Pallet::<T>::mint_into(asset, &T::TreasuryAccount::get(), fee)?;
-					Ok(burn_amount.checked_sub(&fee).ok_or(ArithmeticError::Overflow)?)
-				},
-			}
+	}
+	// Return actual amount to target chain after deduction e.g fee
+	fn prepare_token_bridge_out(
+		resource_id: ResourceId,
+		who: A,
+		amount: B,
+	) -> Result<B, DispatchError> {
+		let asset_info = Self::resource_to_asset_info(resource_id);
+		match asset_info {
+			None => Err(Error::<T>::InvalidResourceId.into()),
+			// Native token
+			Some(AssetInfo { fee, asset: None }) => {
+				Self::deposit_event(Event::TokenBridgeOut {
+					asset_id: None,
+					to: who.clone(),
+					amount,
+					fee,
+				});
+				let burn_amount = pallet_balances::Pallet::<T>::burn_from(
+					&who,
+					amount,
+					Precision::Exact,
+					Fortitude::Polite,
+				)?;
+				ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
+				pallet_balances::Pallet::<T>::mint_into(&T::TreasuryAccount::get(), fee)?;
+				Ok(burn_amount.checked_sub(&fee).ok_or(ArithmeticError::Overflow)?)
+			},
+			// pallet assets
+			Some(AssetInfo { fee, asset: Some(asset) }) => {
+				Self::deposit_event(Event::TokenBridgeOut {
+					asset_id: Some(asset.clone()),
+					to: who.clone(),
+					amount,
+					fee,
+				});
+				let burn_amount = pallet_assets::Pallet::<T>::burn_from(
+					asset.clone(),
+					&who,
+					amount,
+					Precision::Exact,
+					Fortitude::Polite,
+				)?;
+				ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
+				pallet_assets::Pallet::<T>::mint_into(asset, &T::TreasuryAccount::get(), fee)?;
+				Ok(burn_amount.checked_sub(&fee).ok_or(ArithmeticError::Overflow)?)
+			},
 		}
 	}
 }

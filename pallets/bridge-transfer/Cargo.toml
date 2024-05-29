@@ -24,8 +24,6 @@ frame-system = { workspace = true }
 pallet-bridge = { workspace = true }
 
 [dev-dependencies]
-pallet-assets = { workspace = true, features = ["std"] }
-pallet-assets-handler = { workspace = true, features = ["std"] }
 pallet-balances = { workspace = true, features = ["std"] }
 pallet-timestamp = { workspace = true, features = ["std"] }
 

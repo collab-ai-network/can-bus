@@ -52,13 +52,7 @@ benchmarks! {
 		let sender:T::AccountId = create_user::<T>("sender",0u32,1u32);
 
 		ensure!(T::TransferNativeMembers::contains(&sender),"add transfer_native_member failed");
-
 		let dest_chain = 0;
-
-		pallet_bridge::Pallet::<T>::whitelist_chain(
-			RawOrigin::Root.into(),
-			dest_chain,
-		)?;
 
 		let r_id = NATIVE_TOKEN_RESOURCE_ID;
 
