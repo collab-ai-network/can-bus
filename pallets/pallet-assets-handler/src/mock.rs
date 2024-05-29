@@ -14,26 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
-use crate::{self as bridge_transfer, Config};
+use crate::{self as pallet_assets_handler};
 use frame_support::{
 	assert_ok, derive_impl, ord_parameter_types, parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, SortedMembers},
 	PalletId,
 };
-use frame_system as system;
 use hex_literal::hex;
 use pallet_assets_handler::AssetInfo;
-pub use pallet_balances as balances;
-use pallet_bridge as bridge;
 use sp_core::{ConstU16, H256};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	BuildStorage,
 };
 pub const TEST_THRESHOLD: u32 = 2;
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 type Balance = u64;
@@ -43,11 +37,10 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system,
 		Balances: pallet_balances,
-		Bridge: bridge,
+		Bridge: pallet_bridge,
 		Assets: pallet_assets,
 		AssetsHandler: pallet_assets_handler,
-		BridgeTransfer: bridge_transfer,
-		Timestamp: pallet_timestamp,
+		BridgeTransfer: pallet_bridge_transfer,
 	}
 );
 
@@ -105,7 +98,7 @@ parameter_types! {
 	pub const TreasuryAccount:u64 = 0x8;
 }
 
-impl bridge::Config for Test {
+impl pallet_bridge::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
@@ -172,17 +165,10 @@ impl pallet_assets_handler::Config for Test {
 	type TreasuryAccount = TreasuryAccount;
 }
 
-impl Config for Test {
-	type BridgeOrigin = bridge::EnsureBridge<Test>;
+impl pallet_bridge_transfer::Config for Test {
+	type BridgeOrigin = pallet_bridge::EnsureBridge<Test>;
 	type TransferNativeMembers = MembersProvider;
 	type BridgeHandler = AssetsHandler;
-	type WeightInfo = ();
-}
-
-impl pallet_timestamp::Config for Test {
-	type Moment = u64;
-	type OnTimestampSet = ();
-	type MinimumPeriod = ConstU64<1>;
 	type WeightInfo = ();
 }
 
@@ -223,8 +209,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 pub fn new_test_ext_initialized(
-	src_id: bridge::BridgeChainId,
-	r_id: bridge::ResourceId,
+	src_id: pallet_bridge::BridgeChainId,
+	r_id: pallet_bridge::ResourceId,
 	asset: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
 		<Test as pallet_assets::Config>::Balance,
@@ -252,7 +238,7 @@ pub fn new_test_ext_initialized(
 // include the most recent event, but do not have to include every past event.
 pub fn assert_events(mut expected: Vec<RuntimeEvent>) {
 	let mut actual: Vec<RuntimeEvent> =
-		system::Pallet::<Test>::events().iter().map(|e| e.event.clone()).collect();
+		frame_system::Pallet::<Test>::events().iter().map(|e| e.event.clone()).collect();
 
 	expected.reverse();
 

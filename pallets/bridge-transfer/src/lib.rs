@@ -59,7 +59,7 @@ pub mod pallet {
 		/// the bridge pallet
 		type BridgeOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 
-		/// The priviledged accounts to call the transfer_native
+		/// The priviledged accounts to call the transfer_assets
 		type TransferNativeMembers: SortedMembers<Self::AccountId>;
 
 		// Handler of asset transfer/burn/mint etc.

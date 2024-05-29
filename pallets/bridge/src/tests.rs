@@ -454,7 +454,7 @@ fn signal_transfer_fungible() {
 			dest_id,
 			1,
 			resource_id,
-			100 - 10,
+			100,
 			dest_account,
 		))]);
 	})

@@ -63,7 +63,7 @@ fn transfer() {
 }
 
 #[test]
-fn transfer_native() {
+fn transfer_assets() {
 	let dest_bridge_id: bridge::BridgeChainId = 0;
 	let resource_id = NativeTokenResourceId::get();
 
@@ -78,20 +78,16 @@ fn transfer_native() {
 		));
 		assert_eq!(
 			pallet_balances::Pallet::<Test>::free_balance(TreasuryAccount::get()),
-			ENDOWED_BALANCE + 10
+			ENDOWED_BALANCE
 		);
 		assert_eq!(pallet_balances::Pallet::<Test>::free_balance(RELAYER_A), ENDOWED_BALANCE - 100);
 		assert_events(vec![
 			RuntimeEvent::Balances(balances::Event::Burned { who: RELAYER_A, amount: 100 }),
-			RuntimeEvent::Balances(balances::Event::Minted {
-				who: TreasuryAccount::get(),
-				amount: 10,
-			}),
 			RuntimeEvent::Bridge(bridge::Event::FungibleTransfer(
 				dest_bridge_id,
 				1,
 				resource_id,
-				100 - 10,
+				100,
 				dest_account,
 			)),
 		]);

@@ -17,6 +17,10 @@
 //! A pallet for temporary fix of onchain accountInfo.
 //! No storage for this pallet and it should be removed right after fixing.
 #![cfg_attr(not(feature = "std"), no_std)]
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -85,7 +89,7 @@ pub mod pallet {
 		ResourceRemoved {
 			resource_id: ResourceId,
 		},
-		/// A certain amount of native tokens was minted
+		/// A certain amount of asset tokens was minted
 		TokenBridgeIn {
 			asset_id: Option<AssetId<T>>,
 			to: T::AccountId,
@@ -94,6 +98,7 @@ pub mod pallet {
 		TokenBridgeOut {
 			asset_id: Option<AssetId<T>>,
 			to: T::AccountId,
+			// Before Fee
 			amount: BalanceOf<T>,
 			fee: BalanceOf<T>,
 		},
@@ -209,6 +214,9 @@ where
 					amount,
 					fee,
 				});
+				// Since we use Exact approach
+				// Burn amount will always be amount exactly
+				// Otherwise
 				let burn_amount = pallet_assets::Pallet::<T>::burn_from(
 					asset.clone(),
 					&who,

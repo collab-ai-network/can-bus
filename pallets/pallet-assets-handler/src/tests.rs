@@ -14,31 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use super::{
-	bridge,
 	mock::{
-		assert_events, balances, new_test_ext, new_test_ext_initialized, Balances, Bridge,
-		BridgeTransfer, NativeTokenResourceId, ProposalLifetime, RuntimeCall, RuntimeEvent,
-		RuntimeOrigin, Test, TreasuryAccount, ENDOWED_BALANCE, RELAYER_A, RELAYER_B, RELAYER_C,
+		assert_events, new_test_ext, new_test_ext_initialized, Balances, Bridge, BridgeTransfer,
+		NativeTokenResourceId, ProposalLifetime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Test,
+		TreasuryAccount, ENDOWED_BALANCE, RELAYER_A, RELAYER_B, RELAYER_C,
 	},
 	*,
 };
 use frame_support::{assert_noop, assert_ok};
 use hex_literal::hex;
-use pallet_assets_handler::AssetInfo;
 use sp_runtime::ArithmeticError;
 
 fn make_transfer_proposal(to: u64, amount: u64) -> RuntimeCall {
 	let rid = NativeTokenResourceId::get();
 	// let amount
-	RuntimeCall::BridgeTransfer(crate::Call::transfer { to, amount, rid })
+	RuntimeCall::BridgeTransfer(pallet_bridge_transfer::Call::transfer { to, amount, rid })
 }
 
 #[test]
 fn constant_equality() {
-	let r_id = bridge::derive_resource_id(1, &bridge::hashing::blake2_128(b"LIT"));
+	let r_id = pallet_bridge::derive_resource_id(1, &pallet_bridge::hashing::blake2_128(b"LIT"));
 	let encoded: [u8; 32] =
 		hex!("0000000000000000000000000000000a21dfe87028f214dd976be8479f5af001");
 	assert_eq!(r_id, encoded);
@@ -46,7 +42,7 @@ fn constant_equality() {
 
 #[test]
 fn transfer() {
-	let dest_bridge_id: bridge::BridgeChainId = 0;
+	let dest_bridge_id: pallet_bridge::BridgeChainId = 0;
 	let resource_id = NativeTokenResourceId::get();
 	let native_token_asset_info: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
@@ -65,20 +61,23 @@ fn transfer() {
 			assert_eq!(Balances::free_balance(RELAYER_A), ENDOWED_BALANCE + 10);
 
 			assert_events(vec![
-				RuntimeEvent::AssetsHandler(pallet_assets_handler::Event::TokenBridgeIn {
+				RuntimeEvent::AssetsHandler(Event::TokenBridgeIn {
 					asset_id: None,
 					to: RELAYER_A,
 					amount: 10,
 				}),
-				RuntimeEvent::Balances(balances::Event::Minted { who: RELAYER_A, amount: 10 }),
+				RuntimeEvent::Balances(pallet_balances::Event::Minted {
+					who: RELAYER_A,
+					amount: 10,
+				}),
 			]);
 		},
 	)
 }
 
 #[test]
-fn transfer_native() {
-	let dest_bridge_id: bridge::BridgeChainId = 0;
+fn transfer_assets() {
+	let dest_bridge_id: pallet_bridge::BridgeChainId = 0;
 	let resource_id = NativeTokenResourceId::get();
 	let native_token_asset_info: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
@@ -88,7 +87,7 @@ fn transfer_native() {
 	new_test_ext_initialized(dest_bridge_id, resource_id, native_token_asset_info).execute_with(
 		|| {
 			let dest_account: Vec<u8> = vec![1];
-			assert_ok!(Pallet::<Test>::transfer_assets(
+			assert_ok!(pallet_bridge_transfer::Pallet::<Test>::transfer_assets(
 				RuntimeOrigin::signed(RELAYER_A),
 				100,
 				dest_account.clone(),
@@ -104,18 +103,21 @@ fn transfer_native() {
 				ENDOWED_BALANCE - 100
 			);
 			assert_events(vec![
-				RuntimeEvent::AssetsHandler(pallet_assets_handler::Event::TokenBridgeOut {
+				RuntimeEvent::AssetsHandler(Event::TokenBridgeOut {
 					asset_id: None,
 					to: RELAYER_A,
-					amount: 10,
-					fee: 19,
+					amount: 100,
+					fee: 10,
 				}),
-				RuntimeEvent::Balances(balances::Event::Burned { who: RELAYER_A, amount: 100 }),
-				RuntimeEvent::Balances(balances::Event::Minted {
+				RuntimeEvent::Balances(pallet_balances::Event::Burned {
+					who: RELAYER_A,
+					amount: 100,
+				}),
+				RuntimeEvent::Balances(pallet_balances::Event::Minted {
 					who: TreasuryAccount::get(),
 					amount: 10,
 				}),
-				RuntimeEvent::Bridge(bridge::Event::FungibleTransfer(
+				RuntimeEvent::Bridge(pallet_bridge::Event::FungibleTransfer(
 					dest_bridge_id,
 					1,
 					resource_id,
@@ -129,7 +131,7 @@ fn transfer_native() {
 
 #[test]
 fn mint_overflow() {
-	let dest_bridge_id: bridge::BridgeChainId = 0;
+	let dest_bridge_id: pallet_bridge::BridgeChainId = 0;
 	let resource_id = NativeTokenResourceId::get();
 	let native_token_asset_info: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
@@ -158,8 +160,10 @@ fn mint_overflow() {
 fn transfer_to_regular_account() {
 	new_test_ext().execute_with(|| {
 		let dest_chain = 0;
-		let asset =
-			bridge::derive_resource_id(dest_chain, &bridge::hashing::blake2_128(b"an asset"));
+		let asset = pallet_bridge::derive_resource_id(
+			dest_chain,
+			&pallet_bridge::hashing::blake2_128(b"an asset"),
+		);
 		let amount: u64 = 100;
 
 		assert_noop!(
@@ -169,14 +173,14 @@ fn transfer_to_regular_account() {
 				amount,
 				asset,
 			),
-			pallet_assets_handler::Error::<Test>::InvalidResourceId
+			Error::<Test>::InvalidResourceId
 		);
 	})
 }
 
 #[test]
 fn create_successful_transfer_proposal() {
-	let src_id: bridge::BridgeChainId = 0;
+	let src_id: pallet_bridge::BridgeChainId = 0;
 	let r_id = NativeTokenResourceId::get();
 	let native_token_asset_info: AssetInfo<
 		<Test as pallet_assets::Config>::AssetId,
@@ -196,10 +200,10 @@ fn create_successful_transfer_proposal() {
 			Box::new(proposal.clone())
 		));
 		let prop = Bridge::votes(src_id, (prop_id, proposal.clone())).unwrap();
-		let expected = bridge::ProposalVotes {
+		let expected = pallet_bridge::ProposalVotes {
 			votes_for: vec![RELAYER_A],
 			votes_against: vec![],
-			status: bridge::ProposalStatus::Initiated,
+			status: pallet_bridge::ProposalStatus::Initiated,
 			expiry: ProposalLifetime::get() + 1,
 		};
 		assert_eq!(prop, expected);
@@ -213,10 +217,10 @@ fn create_successful_transfer_proposal() {
 			Box::new(proposal.clone())
 		));
 		let prop = Bridge::votes(src_id, (prop_id, proposal.clone())).unwrap();
-		let expected = bridge::ProposalVotes {
+		let expected = pallet_bridge::ProposalVotes {
 			votes_for: vec![RELAYER_A],
 			votes_against: vec![RELAYER_B],
-			status: bridge::ProposalStatus::Initiated,
+			status: pallet_bridge::ProposalStatus::Initiated,
 			expiry: ProposalLifetime::get() + 1,
 		};
 		assert_eq!(prop, expected);
@@ -230,10 +234,10 @@ fn create_successful_transfer_proposal() {
 			Box::new(proposal.clone())
 		));
 		let prop = Bridge::votes(src_id, (prop_id, proposal)).unwrap();
-		let expected = bridge::ProposalVotes {
+		let expected = pallet_bridge::ProposalVotes {
 			votes_for: vec![RELAYER_A, RELAYER_C],
 			votes_against: vec![RELAYER_B],
-			status: bridge::ProposalStatus::Approved,
+			status: pallet_bridge::ProposalStatus::Approved,
 			expiry: ProposalLifetime::get() + 1,
 		};
 		assert_eq!(prop, expected);
@@ -241,17 +245,17 @@ fn create_successful_transfer_proposal() {
 		assert_eq!(Balances::free_balance(RELAYER_A), ENDOWED_BALANCE + 10);
 
 		assert_events(vec![
-			RuntimeEvent::Bridge(bridge::Event::VoteFor(src_id, prop_id, RELAYER_A)),
-			RuntimeEvent::Bridge(bridge::Event::VoteAgainst(src_id, prop_id, RELAYER_B)),
-			RuntimeEvent::Bridge(bridge::Event::VoteFor(src_id, prop_id, RELAYER_C)),
-			RuntimeEvent::Bridge(bridge::Event::ProposalApproved(src_id, prop_id)),
-			RuntimeEvent::Balances(balances::Event::Minted { who: RELAYER_A, amount: 10 }),
-			RuntimeEvent::BridgeTransfer(pallet_assets_handler::Event::TokenBridgeIn {
+			RuntimeEvent::Bridge(pallet_bridge::Event::VoteFor(src_id, prop_id, RELAYER_A)),
+			RuntimeEvent::Bridge(pallet_bridge::Event::VoteAgainst(src_id, prop_id, RELAYER_B)),
+			RuntimeEvent::Bridge(pallet_bridge::Event::VoteFor(src_id, prop_id, RELAYER_C)),
+			RuntimeEvent::Bridge(pallet_bridge::Event::ProposalApproved(src_id, prop_id)),
+			RuntimeEvent::AssetsHandler(Event::TokenBridgeIn {
 				asset_id: None,
 				to: RELAYER_A,
 				amount: 10,
 			}),
-			RuntimeEvent::Bridge(bridge::Event::ProposalSucceeded(src_id, prop_id)),
+			RuntimeEvent::Balances(pallet_balances::Event::Minted { who: RELAYER_A, amount: 10 }),
+			RuntimeEvent::Bridge(pallet_bridge::Event::ProposalSucceeded(src_id, prop_id)),
 		]);
 	})
 }
