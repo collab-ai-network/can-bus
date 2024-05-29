@@ -44,9 +44,9 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances,
 		Bridge: bridge,
-		BridgeTransfer: bridge_transfer,
-		AssetsHandler: pallet_assets_handler,
 		Assets: pallet_assets,
+		AssetsHandler: pallet_assets_handler,
+		BridgeTransfer: bridge_transfer,
 		Timestamp: pallet_timestamp,
 	}
 );
