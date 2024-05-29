@@ -142,7 +142,7 @@ pub mod pallet {
 			+ pallet_bridge::Config<Balance = B>
 			+ pallet_assets::Config<Balance = B>
 			+ pallet_balances::Config<Balance = B>,
-		B: Copy + FixedPointOperand,
+		B: Copy + FixedPointOperand + CheckedSub,
 		A: Clone,
 	{
 		fn prepare_token_bridge_in(
@@ -198,7 +198,7 @@ pub mod pallet {
 					)?;
 					ensure!(burn_amount > fee, Error::<T>::CannotPayAsFee);
 					pallet_balances::Pallet::<T>::mint_into(&T::TreasuryAccount::get(), fee)?;
-					Ok(burn_amount - fee)
+					Ok(burn_amount.checked_sub(&fee).ok_or(ArithmeticError::Overflow)?)
 				},
 				// pallet assets
 				Some(AssetInfo { fee, asset: Some(asset) }) => {
