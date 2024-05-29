@@ -29,7 +29,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use pallet_bridge_transfer::BridgeHandler;
-use sp_runtime::{traits::CheckedSub, ArithmeticError, DispatchError};
+use sp_runtime::{traits::CheckedSub, ArithmeticError, DispatchError, FixedPointOperand};
 use sp_std::{fmt::Debug, prelude::*};
 type ResourceId = pallet_bridge::ResourceId;
 
@@ -142,6 +142,8 @@ pub mod pallet {
 			+ pallet_bridge::Config<Balance = B>
 			+ pallet_assets::Config<Balance = B>
 			+ pallet_balances::Config<Balance = B>,
+		B: Copy + FixedPointOperand,
+		A: Clone,
 	{
 		fn prepare_token_bridge_in(
 			resource_id: ResourceId,
