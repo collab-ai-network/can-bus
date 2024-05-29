@@ -135,17 +135,19 @@ pub mod pallet {
 		}
 	}
 
-	impl<T> BridgeHandler<BalanceOf<T>, T::AccountId, ResourceId> for Pallet<T>
+	impl<T, B, A> BridgeHandler<B, A, ResourceId> for Pallet<T>
 	where
 		T: Config
-			+ pallet_assets::Config<Balance = BalanceOf<T>>
-			+ pallet_balances::Config<Balance = BalanceOf<T>>,
+			+ frame_system::Config<AccountId = A>
+			+ pallet_bridge::Config<Balance = B>
+			+ pallet_assets::Config<Balance = B>
+			+ pallet_balances::Config<Balance = B>,
 	{
 		fn prepare_token_bridge_in(
 			resource_id: ResourceId,
-			who: T::AccountId,
-			amount: BalanceOf<T>,
-		) -> Result<BalanceOf<T>, DispatchError> {
+			who: A,
+			amount: B,
+		) -> Result<B, DispatchError> {
 			let asset_info = Self::resource_to_asset_info(resource_id);
 			match asset_info {
 				None => Err(Error::<T>::InvalidResourceId.into()),
@@ -172,9 +174,9 @@ pub mod pallet {
 		// Return actual amount to target chain after deduction e.g fee
 		fn prepare_token_bridge_out(
 			resource_id: ResourceId,
-			who: T::AccountId,
-			amount: BalanceOf<T>,
-		) -> Result<BalanceOf<T>, DispatchError> {
+			who: A,
+			amount: B,
+		) -> Result<B, DispatchError> {
 			let asset_info = Self::resource_to_asset_info(resource_id);
 			match asset_info {
 				None => Err(Error::<T>::InvalidResourceId.into()),
