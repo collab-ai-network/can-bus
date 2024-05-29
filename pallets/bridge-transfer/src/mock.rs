@@ -35,6 +35,8 @@ use sp_runtime::{
 pub const TEST_THRESHOLD: u32 = 2;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+type Balance = u64;
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test
@@ -81,7 +83,7 @@ ord_parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-	type Balance = u64;
+	type Balance = Balance;
 	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ConstU64<1>;
@@ -108,7 +110,7 @@ impl bridge::Config for Test {
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
-	type Balance = u64;
+	type Balance = Balance;
 	type ProposalLifetime = ProposalLifetime;
 	type WeightInfo = ();
 }
@@ -144,7 +146,7 @@ impl SortedMembers<u64> for MembersProvider {
 
 impl pallet_assets::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type Balance = u64;
+	type Balance = Balance;
 	type AssetId = u32;
 	type AssetIdParameter = u32;
 	type Currency = Balances;
