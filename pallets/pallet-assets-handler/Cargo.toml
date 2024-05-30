@@ -1,6 +1,6 @@
 [package]
 authors = ['Trust Computing GmbH <info@litentry.com>']
-description = 'Pallet for temporary fix of onchain accountInfo'
+description = 'Pallet for Assets handler of token bridge'
 edition = '2021'
 homepage = 'https://litentry.com/'
 license = 'GPL-3.0'
