@@ -181,7 +181,7 @@ precompile-utils = { git = "https://github.com/polkadot-evm/frontier", branch = 
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 
 # local
-pallet-assets-handler = { path = "pallets/pallet-assets-handler", default-features = false }
+pallet-assets-handler = { path = "pallets/assets-handler", default-features = false }
 pallet-bridge = { path = "pallets/bridge", default-features = false }
 pallet-bridge-transfer = { path = "pallets/bridge-transfer", default-features = false }
 pallet-template = { path = "pallets/template", default-features = false }
