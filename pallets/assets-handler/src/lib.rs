@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-//! A pallet for temporary fix of onchain accountInfo.
-//! No storage for this pallet and it should be removed right after fixing.
+//! A pallet for handling bridge transfer lgoic.
 #![cfg_attr(not(feature = "std"), no_std)]
 #[cfg(test)]
 mod mock;
