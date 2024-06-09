@@ -13,7 +13,10 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One},
+	traits::{
+		AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
+		One,
+	},
 	ArithmeticError, FixedPointOperand, Perquintill, Saturating,
 };
 use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
@@ -122,12 +125,12 @@ where
 		let er: u128 = self.epoch_range.try_into().ok()?;
 		let st: u128 = self.start_time.try_into().ok()?;
 		let result = st.checked_add(er.checked_mul(self.epoch)?)?;
-		Some(result.try_int().ok()?)
+		Some(result.try_into().ok()?)
 	}
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub struct StakingPoolMetadata<BoundedString> {
+pub struct PoolMetadata<BoundedString> {
 	/// The user friendly name of this staking pool. Limited in length by `PoolStringLimit`.
 	pub name: BoundedString,
 	/// The short description for this staking pool. Limited in length by `PoolStringLimit`.
@@ -194,7 +197,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::PoolId,
-		StakingPoolMetadata<BoundedVec<u8, T::PoolStringLimit>>,
+		PoolMetadata<BoundedVec<u8, T::PoolStringLimit>>,
 		OptionQuery,
 	>;
 
@@ -442,7 +445,7 @@ pub mod pallet {
 					description.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 				<StakingPoolMetadata<T>>::insert(
 					pool_id,
-					StakingPoolMetadata { name: bounded_name, description: bounded_description },
+					PoolMetadata { name: bounded_name, description: bounded_description },
 				);
 				Self::deposit_event(Event::MetadataSet { pool_id, name: name_inner, description });
 			} else {
@@ -480,7 +483,7 @@ pub mod pallet {
 				|maybe_reward| -> DispatchResult {
 					ensure!(maybe_reward.is_none(), Error::<T>::RewardAlreadyExisted);
 
-					*maybe_reward = actual_reward;
+					*maybe_reward = Some(StableRewardInfo { epoch, reward_amount: actual_reward });
 					Self::deposit_event(Event::<T>::RewardUpdated {
 						pool_id,
 						epoch,
@@ -532,7 +535,7 @@ pub mod pallet {
 			.ok_or(Error::<T>::EpochOverflow)?;
 			let effective_time = Self::get_epoch_begin_time(pool_id, effective_epoch)?;
 			// Insert into pending storage waiting for hook to trigger
-			<PendingSetup<T>>::try_mutate(|maybe_order| {
+			<PendingSetup<T>>::mutate(|maybe_order| {
 				let order = StakingInfoWithOwner {
 					who: source,
 					pool_id,
@@ -543,8 +546,7 @@ pub mod pallet {
 				maybe_order.make_contiguous().sort_by(|a, b| {
 					a.staking_info.effective_time.cmp(&b.staking_info.effective_time)
 				});
-				Ok(())
-			})?;
+			});
 			// Native staking effect immediately
 			Self::do_native_add(source, amount, current_block)?;
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
@@ -653,7 +655,10 @@ pub mod pallet {
 			let result = setting
 				.start_time
 				.checked_add(
-					setting.epoch_range.checked_mul(epoch).ok_or(Error::<T>::EpochOverflow)?,
+					&setting
+						.epoch_range
+						.checked_mul(epoch.try_into()?)
+						.ok_or(Error::<T>::EpochOverflow)?,
 				)
 				.ok_or(Error::<T>::EpochOverflow)?;
 			return Some(result)
@@ -679,7 +684,7 @@ pub mod pallet {
 				} else {
 					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
-				Ok(())
+				Ok::<(), DispatchError>(())
 			})?;
 			Ok(())
 		}
@@ -699,7 +704,7 @@ pub mod pallet {
 				}
 				Ok(())
 			})?;
-			<UserStableStakingPoolCheckpoint<T>>::try_mutate(&pool_id, &who, |maybe_checkpoint| {
+			<UserStableStakingPoolCheckpoint<T>>::try_mutate(&who, &pool_id, |maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
@@ -765,7 +770,10 @@ pub mod pallet {
 						Preservation::Expendable,
 					)?;
 					// Adjust checkpoint and reward storage
-					<StableStakingPoolReward<T>>::put(reward_pool - distributed_reward);
+					<StableStakingPoolReward<T>>::insert(
+						&pool_id,
+						reward_pool - distributed_reward,
+					);
 					<StableStakingPoolCheckpoint<T>>::insert(&pool_id, scp);
 					<UserStableStakingPoolCheckpoint<T>>::insert(&who, &pool_id, user_scp);
 					Self::deposit_event(Event::<T>::StableRewardClaimed {
