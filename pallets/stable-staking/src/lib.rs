@@ -4,7 +4,6 @@ use frame_support::{
 	traits::{
 		tokens::{
 			fungible::Mutate as FMutate, fungibles::Mutate as FsMutate, Fortitude, Precision,
-			Preserve,
 		},
 		StorageVersion,
 	},
@@ -12,7 +11,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, One},
+	traits::{CheckedAdd, CheckedSub, One, AtLeast32BitUnsigned},
 	ArithmeticError, DispatchError, FixedPointOperand,
 };
 use sp_std::{fmt::Debug, prelude::*};
@@ -64,7 +63,7 @@ where
 		let oe: u128 = Self.effective_time.try_into().ok()?;
 		let os: u128 = Self.amount.try_into().ok()?;
 
-		let new_amount: u128 = (os.checked_add(s)?);
+		let new_amount: u128 = os.checked_add(s)?;
 		// (oe * os + e * s) / (os + s)
 		let new_effective_time: u128 =
 			(oe.checked_mul(os)?.checked_add(e.checked_mul(s)?)?).checked_div(new_amount)?;
@@ -116,9 +115,9 @@ pub struct PoolSetting<BlockNumber, Balance> {
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct StakingPoolMetadata<BoundedString> {
 	/// The user friendly name of this staking pool. Limited in length by `StringLimit`.
-	pub(super) name: BoundedString,
+	pub name: BoundedString,
 	/// The short description for this staking pool. Limited in length by `StringLimit`.
-	pub(super) description: BoundedString,
+	pub description: BoundedString,
 }
 
 #[frame_support::pallet]
@@ -208,7 +207,7 @@ pub mod pallet {
 	// Currently all reward if user did not claimed on time will be mixed equally based on staking
 	// weight That means if APY is low may leads to user not claiming their reward on purpose
 	#[pallet::storage]
-	#[pallet::getter(fn stable_staking_pool_reward)]
+	#[pallet::getter(fn stable_staking_pool_epoch_reward)]
 	pub type StableStakingPoolEpochReward<T: Config> =
 		StorageMap<_, Twox64Concat, T::PoolId, u128, StableRewardInfo<BalanceOf<T>>, OptionQuery>;
 
