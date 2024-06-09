@@ -92,7 +92,7 @@ where
 	// You should never use n < any single effective_time
 	// it only works for n > all effective_time
 	fn weight(&self, n: BlockNumber) -> Option<u128> {
-		let e: u128 = n.checked_sub(&self.effective_time)?;
+		let e: u128 = n.checked_sub(&self.effective_time)?.try_into().ok()?;
 		let s: u128 = self.amount.try_into().ok()?;
 		e.checked_mul(s)
 	}
@@ -102,8 +102,7 @@ where
 pub struct PoolSetting<BlockNumber, Balance> {
 	// The start time of staking pool
 	pub start_time: BlockNumber,
-
-	// How many epoch will staking pool last, [0..n)
+	// How many epoch will staking pool last, n > 0, valid epoch index :[0..n)
 	pub epoch: u128,
 	// How many blocks each epoch consist
 	pub epoch_range: BlockNumber,
@@ -112,6 +111,19 @@ pub struct PoolSetting<BlockNumber, Balance> {
 	pub setup_time: BlockNumber,
 	// Max staked amount of pool
 	pub pool_cap: Balance,
+}
+
+impl<BlockNumber, Balance> PoolSetting<BlockNumber, Balance>
+where
+	Balance: AtLeast32BitUnsigned,
+	BlockNumber: AtLeast32BitUnsigned,
+{
+	fn end_time(&self) -> Option<BlockNumber> {
+		let er: u128 = self.epoch_range.try_into().ok()?;
+		let st: u128 = self.start_time.try_into().ok()?;
+		let result = st.checked_add(er.checked_mul(self.epoch)?)?;
+		Some(result.try_int().ok()?)
+	}
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -182,7 +194,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::PoolId,
-		StakingPoolMetadata<BoundedVec<u8, <T as Config>::PoolStringLimit>>,
+		StakingPoolMetadata<BoundedVec<u8, T::PoolStringLimit>>,
 		OptionQuery,
 	>;
 
@@ -215,6 +227,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::PoolId,
+		Twox64Concat,
 		u128,
 		StableRewardInfo<BalanceOf<T>>,
 		OptionQuery,
@@ -242,6 +255,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::AccountId,
+		Twox64Concat,
 		T::PoolId,
 		StakingInfo<BlockNumberFor<T>, BalanceOf<T>>,
 		OptionQuery,
@@ -500,16 +514,19 @@ pub mod pallet {
 			let setting =
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool started and not closed soon
+			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
 			ensure!(
 				setting.start_time < current_block &&
-					setting.end_time > (current_block + setting.setup_time),
+					end_time > (current_block + setting.setup_time),
 				Error::<T>::PoolInvalidForFurtherAction
 			);
 
 			// Try get the beginning block of latest incoming valid epoch for pending staking
 			let effective_epoch = Self::get_epoch_index(
 				pool_id,
-				current_block.checked_add(setting.setup_time).ok_or(Error::<T>::EpochOverflow)?,
+				current_block
+					.checked_add(&setting.setup_time)
+					.ok_or(Error::<T>::EpochOverflow)?,
 			)?
 			.checked_add(One::one())
 			.ok_or(Error::<T>::EpochOverflow)?;
@@ -555,7 +572,8 @@ pub mod pallet {
 			let _ = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
 			// Deposit event inner
-			Self::solve_pending(current_block)?
+			Self::solve_pending(current_block)?;
+			Ok(())
 		}
 
 		// Claim native token reward
@@ -586,7 +604,8 @@ pub mod pallet {
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool closed
 			let current_block = frame_system::Pallet::<T>::block_number();
-			ensure!(setting.end_time < current_block, Error::<T>::PoolInvalidForFurtherAction);
+			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
+			ensure!(end_time < current_block, Error::<T>::PoolInvalidForFurtherAction);
 			// Claim reward
 			Self::do_native_claim(source)?;
 			Self::do_stable_claim(source, pool_id)?;
