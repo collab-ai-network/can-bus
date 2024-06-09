@@ -69,6 +69,7 @@ pallet-evm-precompile-simple = { workspace = true }
 pallet-assets-handler = { workspace = true }
 pallet-bridge = { workspace = true }
 pallet-bridge-transfer = { workspace = true }
+pallet-stable-staking = { workspace = true }
 pallet-template = { workspace = true }
 pallet-halving-mint = { workspace = true }
 
@@ -129,6 +130,7 @@ std = [
     "pallet-evm-precompile-modexp/std",
     "pallet-evm-precompile-sha3fips/std",
 
+	"pallet-stable-staking/std",
 	"pallet-template/std",
 	"pallet-halving-mint/std",
 
@@ -148,6 +150,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"pallet-ethereum/runtime-benchmarks",
 	"pallet-evm/runtime-benchmarks",
+	"pallet-stable-staking/runtime-benchmarks",
 	"pallet-template/runtime-benchmarks",
 	"pallet-halving-mint/runtime-benchmarks",
 	"pallet-bridge/runtime-benchmarks",
@@ -171,6 +174,7 @@ try-runtime = [
     "pallet-evm/try-runtime",
 	"pallet-evm-chain-id/try-runtime",
 	"pallet-base-fee/try-runtime",
+	"pallet-stable-staking/try-runtime",
 	"pallet-template/try-runtime",
 	"pallet-halving-mint/try-runtime",
 ]

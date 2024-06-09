@@ -74,10 +74,14 @@ pub type Signature = MultiSignature;
 /// to the public key of our transaction signing scheme.
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
+/// Asset id
 pub type AssetId = u128;
 
 /// Balance of an account.
 pub type Balance = u128;
+
+/// Pool id
+pub type PoolId = u128;
 
 /// Index of a transaction in the chain.
 pub type Nonce = u32;
@@ -455,7 +459,7 @@ impl pallet_assets::Config for Runtime {
 parameter_types! {
 	pub const BridgeChainId: u8 = 2; // TODO: Determine our chain id
 	pub const ProposalLifetime: BlockNumber = 50400; // ~7 days
-	pub const TreasuryPalletId: PalletId = PalletId(*b"py/bridg");
+	pub const TreasuryPalletId: PalletId = PalletId(*b"can/bdge");
 	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
@@ -496,6 +500,21 @@ impl pallet_bridge_transfer::Config for Runtime {
 	type TransferNativeMembers = TransferNativeAnyone;
 	type BridgeHandler = AssetsHandler;
 	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const StakingPoolId: PalletId = PalletId(*b"can/stpl");
+}
+
+impl pallet_stable_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type StakingPoolCommitteeOrigin = EnsureRoot<AccountId>;
+	type PoolId = PoolId;
+	type Fungibles = Assets;
+	type Fungible = Balances;
+	type StableTokenBeneficiaryId = StakingPoolId;
+	type NativeTokenBeneficiaryId = HavlingMintId;
+	type StringLimit = ConstU32<100>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

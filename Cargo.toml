@@ -184,6 +184,7 @@ xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-s
 pallet-assets-handler = { path = "pallets/assets-handler", default-features = false }
 pallet-bridge = { path = "pallets/bridge", default-features = false }
 pallet-bridge-transfer = { path = "pallets/bridge-transfer", default-features = false }
+pallet-stable-staking = { path = "pallets/stable-staking", default-features = false }
 pallet-template = { path = "pallets/template", default-features = false }
 pallet-halving-mint = { path = "pallets/halving-mint", default-features = false }
 canbus-runtime = { path = "runtime", default-features = false }
