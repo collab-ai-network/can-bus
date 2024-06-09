@@ -287,7 +287,8 @@ pub mod pallet {
 	// Asset id of AIUSD
 	#[pallet::storage]
 	#[pallet::getter(fn aiusd_asset_id)]
-	pub type AIUSDAssetId<T: Config> = StorageValue<_, <T::Fungibles as FsInspect>::AssetId, OptionQuery>;
+	pub type AIUSDAssetId<T: Config> =
+		StorageValue<_, <T::Fungibles as FsInspect>::AssetId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
