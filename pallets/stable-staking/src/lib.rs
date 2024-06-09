@@ -9,6 +9,7 @@ use frame_support::{
 		},
 		StorageVersion,
 	},
+	PalletId,
 };
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
@@ -20,10 +21,6 @@ use sp_runtime::{
 	ArithmeticError, FixedPointOperand, Perquintill, Saturating,
 };
 use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
-
-/// A pallet identifier. These are per pallet and should be stored in a registry somewhere.
-#[derive(Clone, Copy, Eq, PartialEq, Encode, Decode, TypeInfo)]
-pub struct PalletId(pub [u8; 8]);
 
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
 pub struct StakingInfo<BlockNumber, Balance> {
@@ -54,8 +51,8 @@ pub struct StableRewardInfo<Balance> {
 
 impl<BlockNumber, Balance> StakingInfo<BlockNumber, Balance>
 where
-	Balance: AtLeast32BitUnsigned,
-	BlockNumber: AtLeast32BitUnsigned,
+	Balance: AtLeast32BitUnsigned + Copy,
+	BlockNumber: AtLeast32BitUnsigned + Copy,
 {
 	// Mixing a new added staking position, replace the checkpoint with Synetic new one
 	// Notice: The logic will be wrong if weight calculated time is before any single added
@@ -118,8 +115,8 @@ pub struct PoolSetting<BlockNumber, Balance> {
 
 impl<BlockNumber, Balance> PoolSetting<BlockNumber, Balance>
 where
-	Balance: AtLeast32BitUnsigned,
-	BlockNumber: AtLeast32BitUnsigned,
+	Balance: AtLeast32BitUnsigned + Copy,
+	BlockNumber: AtLeast32BitUnsigned + Copy,
 {
 	fn end_time(&self) -> Option<BlockNumber> {
 		let er: u128 = self.epoch_range.try_into().ok()?;
@@ -444,12 +441,12 @@ pub mod pallet {
 				let bounded_description: BoundedVec<u8, T::PoolStringLimit> =
 					description.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 				<StakingPoolMetadata<T>>::insert(
-					pool_id,
+					pool_id.clone(),
 					PoolMetadata { name: bounded_name, description: bounded_description },
 				);
 				Self::deposit_event(Event::MetadataSet { pool_id, name: name_inner, description });
 			} else {
-				<StakingPoolMetadata<T>>::remove(pool_id);
+				<StakingPoolMetadata<T>>::remove(pool_id.clone());
 				Self::deposit_event(Event::MetadataRemoved { pool_id });
 			}
 			Ok(())
@@ -485,12 +482,12 @@ pub mod pallet {
 
 					*maybe_reward = Some(StableRewardInfo { epoch, reward_amount: actual_reward });
 					Self::deposit_event(Event::<T>::RewardUpdated {
-						pool_id,
+						pool_id: pool_id.clone(),
 						epoch,
 						amount: actual_reward,
 					});
 					let current_block = frame_system::Pallet::<T>::block_number();
-					let current_epoch = Self::get_epoch_index(pool_id, current_block)?;
+					let current_epoch = Self::get_epoch_index(pool_id.clone(), current_block)?;
 					ensure!(current_epoch <= epoch, Error::<T>::EpochAlreadyEnded);
 					Ok(())
 				},
@@ -515,7 +512,7 @@ pub mod pallet {
 			let source = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let setting =
-				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
+				<StakingPoolSetting<T>>::get(pool_id.clone()).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool started and not closed soon
 			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
 			ensure!(
@@ -526,19 +523,19 @@ pub mod pallet {
 
 			// Try get the beginning block of latest incoming valid epoch for pending staking
 			let effective_epoch = Self::get_epoch_index(
-				pool_id,
+				pool_id.clone(),
 				current_block
 					.checked_add(&setting.setup_time)
 					.ok_or(Error::<T>::EpochOverflow)?,
 			)?
 			.checked_add(One::one())
 			.ok_or(Error::<T>::EpochOverflow)?;
-			let effective_time = Self::get_epoch_begin_time(pool_id, effective_epoch)?;
+			let effective_time = Self::get_epoch_begin_time(pool_id.clone(), effective_epoch)?;
 			// Insert into pending storage waiting for hook to trigger
 			<PendingSetup<T>>::mutate(|maybe_order| {
 				let order = StakingInfoWithOwner {
-					who: source,
-					pool_id,
+					who: source.clone(),
+					pool_id: pool_id.clone(),
 					staking_info: StakingInfo { effective_time, amount },
 				};
 				maybe_order.push_back(order);
@@ -609,8 +606,8 @@ pub mod pallet {
 			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
 			ensure!(end_time < current_block, Error::<T>::PoolInvalidForFurtherAction);
 			// Claim reward
-			Self::do_native_claim(source)?;
-			Self::do_stable_claim(source, pool_id)?;
+			Self::do_native_claim(source.clone())?;
+			Self::do_stable_claim(source.clone(), pool_id.clone())?;
 			// Withdraw and clean/modify all storage
 			Self::do_withdraw(source, pool_id)
 		}
@@ -624,7 +621,7 @@ pub mod pallet {
 			asset_id: <T::Fungibles as FsInspect<T::AccountId>>::AssetId,
 		) -> DispatchResult {
 			T::StakingPoolCommitteeOrigin::ensure_origin(origin)?;
-			<AIUSDAssetId<T>>::put(asset_id);
+			<AIUSDAssetId<T>>::put(asset_id.clone());
 			Self::deposit_event(Event::<T>::AIUSDRegisted { asset_id });
 			Ok(())
 		}
@@ -643,7 +640,7 @@ pub mod pallet {
 				.saturating_div(setting.epoch_range)
 				.try_into()?;
 			ensure!(index < setting.epoch, Error::<T>::EpochOverflow);
-			return Some(index)
+			return Ok(index)
 		}
 
 		fn get_epoch_begin_time(
@@ -661,7 +658,7 @@ pub mod pallet {
 						.ok_or(Error::<T>::EpochOverflow)?,
 				)
 				.ok_or(Error::<T>::EpochOverflow)?;
-			return Some(result)
+			return Ok(result)
 		}
 
 		// For native_staking
@@ -835,32 +832,31 @@ pub mod pallet {
 		}
 
 		fn solve_pending(n: BlockNumberFor<T>) -> DispatchResult {
-			if let Some(pending_setup) = <PendingSetup<T>>::take() {
-				loop {
-					match pending_setup.pop_front(0) {
-						// Latest Pending tx effective
-						Some(x) if x.staking_info.effective_time <= n => {
-							Self::do_stable_add(x.who, x.pool_id, x.staking_info.amount, n)?;
-							Self::deposit_event(Event::<T>::PendingStakingSolved {
-								who: x.who,
-								pool_id: x.pool_id,
-								effective_time: n,
-								amount: x.staking_info.amount,
-							});
-						},
-						// Latest Pending tx not effective
-						Some(x) => {
-							pending_setup.push_front(x);
-							break;
-						},
-						// No pending tx
-						_ => {
-							break;
-						},
-					}
+			let pending_setup = <PendingSetup<T>>::take();
+			loop {
+				match pending_setup.pop_front(0) {
+					// Latest Pending tx effective
+					Some(x) if x.staking_info.effective_time <= n => {
+						Self::do_stable_add(x.who, x.pool_id, x.staking_info.amount, n)?;
+						Self::deposit_event(Event::<T>::PendingStakingSolved {
+							who: x.who,
+							pool_id: x.pool_id,
+							effective_time: n,
+							amount: x.staking_info.amount,
+						});
+					},
+					// Latest Pending tx not effective
+					Some(x) => {
+						pending_setup.push_front(x);
+						break;
+					},
+					// No pending tx
+					_ => {
+						break;
+					},
 				}
-				<PendingSetup<T>>::put(pending_setup);
 			}
+			<PendingSetup<T>>::put(pending_setup);
 			Ok(())
 		}
 
