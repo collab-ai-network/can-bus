@@ -3,7 +3,9 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{
 		tokens::{
-			fungible::Mutate as FMutate, fungibles::Mutate as FsMutate, Fortitude, Precision,
+			fungible::{Inspect as FInspect, Mutate as FMutate},
+			fungibles::{Inspect as FsInspect, Mutate as FsMutate},
+			Preservation,
 		},
 		StorageVersion,
 	},
@@ -12,9 +14,9 @@ use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, One},
-	ArithmeticError, DispatchError, FixedPointOperand,
+	ArithmeticError, DispatchError, FixedPointOperand, Perquintill,
 };
-use sp_std::{fmt::Debug, prelude::*};
+use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
 
 /// A pallet identifier. These are per pallet and should be stored in a registry somewhere.
 #[derive(Clone, Copy, Eq, PartialEq, Encode, Decode, TypeInfo)]
@@ -55,43 +57,43 @@ where
 	// Mixing a new added staking position, replace the checkpoint with Synetic new one
 	// Notice: The logic will be wrong if weight calculated time is before any single added
 	// effective_time
-	fn add(effective_time: BlockNumber, amount: Balance) -> Option<_> {
+	fn add(&mut self, effective_time: BlockNumber, amount: Balance) -> Option<_> {
 		// We try force all types into u128, then convert it back
 		let e: u128 = effective_time.try_into().ok()?;
 		let s: u128 = amount.try_into()?;
 
-		let oe: u128 = Self.effective_time.try_into().ok()?;
-		let os: u128 = Self.amount.try_into().ok()?;
+		let oe: u128 = self.effective_time.try_into().ok()?;
+		let os: u128 = self.amount.try_into().ok()?;
 
 		let new_amount: u128 = os.checked_add(s)?;
 		// (oe * os + e * s) / (os + s)
 		let new_effective_time: u128 =
 			(oe.checked_mul(os)?.checked_add(e.checked_mul(s)?)?).checked_div(new_amount)?;
-		Self.amount = new_amount.try_into().ok()?;
-		Self.effective_time = new_effective_time.try_into().ok()?;
+		self.amount = new_amount.try_into().ok()?;
+		self.effective_time = new_effective_time.try_into().ok()?;
 		Some(())
 	}
 
 	// Claim/Update stake info and return the consumed weight
-	fn claim(n: BlockNumber) -> Option<u128> {
-		let weight = Self::weight(n)?;
-		Self::effective_time = n;
+	fn claim(&mut self, n: BlockNumber) -> Option<u128> {
+		let weight = self.weight(n)?;
+		self.effective_time = n;
 
 		Some(weight)
 	}
 
 	// Withdraw staking amount and return the amount after withdrawal
-	fn withdraw(v: Balance) -> Option<u128> {
-		Self::amount = Self::amount.checked_sub(v)?;
+	fn withdraw(&mut self, v: Balance) -> Option<u128> {
+		self.amount = self.amount.checked_sub(v)?;
 
-		Some(Self::amount)
+		Some(self.amount)
 	}
 
 	// You should never use n < any single effective_time
 	// it only works for n > all effective_time
-	fn weight(n: BlockNumber) -> Option<u128> {
-		let e: u128 = n.checked_sub(Self.effective_time)?;
-		let s: u128 = Self.amount.try_into().ok()?;
+	fn weight(&self, n: BlockNumber) -> Option<u128> {
+		let e: u128 = n.checked_sub(self.effective_time)?;
+		let s: u128 = self.amount.try_into().ok()?;
 		e.checked_mul(s)
 	}
 }
@@ -126,9 +128,10 @@ pub mod pallet {
 
 	use super::*;
 
-	type BalanceOf<T> = <<T as Config>::Fungibles as Inspect<<T as Config>::AccountId>>::Balance;
+	type BalanceOf<T> =
+		<<T as Config>::Fungibles as FsInspect<<T as frame_system::Config>::AccountId>>::Balance;
 	type NativeBalanceOf<T> =
-		<<T as Config>::Fungible as Inspect<<T as Config>::AccountId>>::Balance;
+		<<T as Config>::Fungible as FInspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -154,9 +157,9 @@ pub mod pallet {
 			+ MaxEncodedLen
 			+ Default;
 
-		type Fungibles: FsMutate<T::AccountId>;
+		type Fungibles: FsMutate<Self::AccountId>;
 
-		type Fungible: FMutate<T::AccountId>;
+		type Fungible: FMutate<Self::AccountId>;
 
 		/// staking account to receive assets of notion
 		#[pallet::constant]
@@ -295,7 +298,7 @@ pub mod pallet {
 			epoch: u128,
 			epoch_range: BlockNumberFor<T>,
 			setup_time: BlockNumberFor<T>,
-			pool_cap: Balance,
+			pool_cap: BalanceOf<T>,
 		},
 		/// New metadata has been set for a staking pool.
 		MetadataSet {
@@ -581,6 +584,7 @@ pub mod pallet {
 			let setting =
 				<StakingPoolSetting<T>>::get(&pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool closed
+			let current_block = frame_system::Pallet::<T>::block_number();
 			ensure!(setting.end_time < current_block, Error::<T>::PoolInvalidForFurtherAction);
 			// Claim reward
 			Self::do_native_claim(source)?;
@@ -645,7 +649,7 @@ pub mod pallet {
 				if let Some(checkpoint) = maybe_chekcpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*checkpoint = StakingInfo { effective_time, amount };
+					*maybe_chekcpoint = Some(StakingInfo { effective_time, amount });
 				}
 				Ok(())
 			})?;
@@ -653,7 +657,7 @@ pub mod pallet {
 				if let Some(checkpoint) = maybe_chekcpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*checkpoint = StakingInfo { effective_time, amount };
+					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
 				Ok(())
 			})?;
@@ -671,7 +675,7 @@ pub mod pallet {
 				if let Some(checkpoint) = maybe_chekcpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*checkpoint = StakingInfo { effective_time, amount };
+					*maybe_chekcpoint = Some(StakingInfo { effective_time, amount });
 				}
 				Ok(())
 			})?;
@@ -679,7 +683,7 @@ pub mod pallet {
 				if let Some(checkpoint) = maybe_chekcpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*checkpoint = StakingInfo { effective_time, amount };
+					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
 				Ok(())
 			})?;
@@ -696,8 +700,8 @@ pub mod pallet {
 				if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(&who) {
 					// get weight and update stake info
 					let proportion = Perquintill::from_rational(
-						user_ncp::claim(current_block).ok_or(ArithmeticError::Overflow)?,
-						ncp::claim(current_block).ok_or(ArithmeticError::Overflow)?,
+						user_ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
+						ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
 					);
 					let distributed_reward: NativeBalanceOf<T> = reward_pool * proportion;
 					T::Fungible::transfer(
@@ -729,8 +733,8 @@ pub mod pallet {
 				if let Some(user_scp) = <UserStableStakingPoolCheckpoint<T>>::get(&who, &pool_id) {
 					// get weight and update stake info
 					let proportion = Perquintill::from_rational(
-						user_scp::claim(current_block).ok_or(ArithmeticError::Overflow)?,
-						scp::claim(current_block).ok_or(ArithmeticError::Overflow)?,
+						user_scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
+						scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
 					);
 					let distributed_reward: BalanceOf<T> = reward_pool * proportion;
 					T::Fungibles::transfer(
@@ -781,7 +785,7 @@ pub mod pallet {
 					<UserStableStakingPoolCheckpoint<T>>::remove(&who, &pool_id);
 					// Clean user native staking storage if zero, modify otherwise
 					if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(&who) {
-						if (user_ncp.amount == user_scp.amount.try_into()?) {
+						if user_ncp.amount == user_scp.amount.try_into()? {
 							<UserNativeCheckpoint<T>>::remove(&who);
 						} else {
 							user_ncp
