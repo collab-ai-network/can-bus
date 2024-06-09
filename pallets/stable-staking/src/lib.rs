@@ -564,7 +564,7 @@ pub mod pallet {
 		}
 
 		// Claim stable token reward
-		#[pallet::call_index(5)]
+		#[pallet::call_index(6)]
 		#[pallet::weight({1000})]
 		#[transactional]
 		pub fn claim_stable(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
@@ -573,7 +573,7 @@ pub mod pallet {
 		}
 
 		// Withdraw AIUSD along with reward if any
-		#[pallet::call_index(6)]
+		#[pallet::call_index(7)]
 		#[pallet::weight({1000})]
 		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
@@ -590,7 +590,7 @@ pub mod pallet {
 		}
 
 		// Registing AIUSD asset id
-		#[pallet::call_index(7)]
+		#[pallet::call_index(8)]
 		#[pallet::weight({1000})]
 		#[transactional]
 		pub fn regist_aiusd(
