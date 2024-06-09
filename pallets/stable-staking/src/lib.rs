@@ -57,10 +57,10 @@ where
 	// Mixing a new added staking position, replace the checkpoint with Synetic new one
 	// Notice: The logic will be wrong if weight calculated time is before any single added
 	// effective_time
-	fn add(&mut self, effective_time: BlockNumber, amount: Balance) -> Option<_> {
+	fn add(&mut self, effective_time: BlockNumber, amount: Balance) -> Option<()> {
 		// We try force all types into u128, then convert it back
 		let e: u128 = effective_time.try_into().ok()?;
-		let s: u128 = amount.try_into()?;
+		let s: u128 = amount.try_into().ok()?;
 
 		let oe: u128 = self.effective_time.try_into().ok()?;
 		let os: u128 = self.amount.try_into().ok()?;
@@ -83,8 +83,8 @@ where
 	}
 
 	// Withdraw staking amount and return the amount after withdrawal
-	fn withdraw(&mut self, v: Balance) -> Option<u128> {
-		self.amount = self.amount.checked_sub(v)?;
+	fn withdraw(&mut self, v: Balance) -> Option<Balance> {
+		self.amount = self.amount.checked_sub(&v)?;
 
 		Some(self.amount)
 	}
@@ -92,7 +92,7 @@ where
 	// You should never use n < any single effective_time
 	// it only works for n > all effective_time
 	fn weight(&self, n: BlockNumber) -> Option<u128> {
-		let e: u128 = n.checked_sub(self.effective_time)?;
+		let e: u128 = n.checked_sub(&self.effective_time)?;
 		let s: u128 = self.amount.try_into().ok()?;
 		e.checked_mul(s)
 	}
@@ -182,7 +182,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::PoolId,
-		StakingPoolMetadata<BoundedVec<u8, T::StringLimit>>,
+		StakingPoolMetadata<BoundedVec<u8, <T as Config>::StringLimit>>,
 		OptionQuery,
 	>;
 
@@ -193,7 +193,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::PoolId,
-		PoolSetting<BalanceOf<T>, BlockNumberFor<T>>,
+		PoolSetting<BlockNumberFor<T>, BalanceOf<T>>,
 		OptionQuery,
 	>;
 
@@ -229,7 +229,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::PoolId,
-		StakingInfo<BalanceOf<T>, BlockNumberFor<T>>,
+		StakingInfo<BlockNumberFor<T>, BalanceOf<T>>,
 		OptionQuery,
 	>;
 
@@ -243,7 +243,7 @@ pub mod pallet {
 		Twox64Concat,
 		T::AccountId,
 		T::PoolId,
-		StakingInfo<BalanceOf<T>, BlockNumberFor<T>>,
+		StakingInfo<BlockNumberFor<T>, BalanceOf<T>>,
 		OptionQuery,
 	>;
 
@@ -253,7 +253,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn native_checkpoint)]
 	pub type NativeCheckpoint<T: Config> =
-		StorageValue<_, StakingInfo<BalanceOf<T>, BlockNumberFor<T>>, OptionQuery>;
+		StorageValue<_, StakingInfo<BlockNumberFor<T>, BalanceOf<T>>, OptionQuery>;
 
 	// Checkpoint of overall staking condition of a single user synthetic by tracking all staking
 	// pool For native token reward distribution
@@ -264,7 +264,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::AccountId,
-		StakingInfo<BalanceOf<T>, BlockNumberFor<T>>,
+		StakingInfo<BlockNumberFor<T>, BalanceOf<T>>,
 		OptionQuery,
 	>;
 
@@ -278,7 +278,7 @@ pub mod pallet {
 			StakingInfoWithOwner<
 				T::AccountId,
 				T::PoolId,
-				StakingInfo<BalanceOf<T>, BlockNumberFor<T>>,
+				StakingInfo<BlockNumberFor<T>, BalanceOf<T>>,
 			>,
 		>,
 		ValueQuery,
@@ -287,7 +287,7 @@ pub mod pallet {
 	// Asset id of AIUSD
 	#[pallet::storage]
 	#[pallet::getter(fn aiusd_asset_id)]
-	pub type AIUSDAssetId<T: Config> = StorageValue<_, T::Fungibles::AssetId, OptionQuery>;
+	pub type AIUSDAssetId<T: Config> = StorageValue<_, <T::Fungibles as FsInspect>::AssetId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -346,7 +346,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		},
 		AIUSDRegisted {
-			asset_id: T::Fungibles::AssetId,
+			asset_id: <T::Fungibles as FsInspect>::AssetId,
 		},
 	}
 
@@ -455,7 +455,7 @@ pub mod pallet {
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			let actual_reward = T::Fungibles::mint_into(
 				asset_id,
-				&Self::stable_toekn_beneficiary_account(),
+				&Self::stable_token_beneficiary_account(),
 				reward,
 			)?;
 
@@ -533,7 +533,7 @@ pub mod pallet {
 			T::Fungibles::transfer(
 				asset_id,
 				&source,
-				&Self::stable_toekn_beneficiary_account(),
+				&Self::stable_token_beneficiary_account(),
 				amount,
 				Preservation::Expendable,
 			)?;
@@ -645,16 +645,16 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 			effective_time: BlockNumberFor<T>,
 		) -> DispatchResult {
-			<NativeCheckpoint<T>>::try_mutate(|maybe_chekcpoint| {
-				if let Some(checkpoint) = maybe_chekcpoint {
+			<NativeCheckpoint<T>>::try_mutate(|maybe_checkpoint| {
+				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*maybe_chekcpoint = Some(StakingInfo { effective_time, amount });
+					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
 				Ok(())
 			})?;
-			<UserNativeCheckpoint<T>>::try_mutate(&who, |maybe_chekcpoint| {
-				if let Some(checkpoint) = maybe_chekcpoint {
+			<UserNativeCheckpoint<T>>::try_mutate(&who, |maybe_checkpoint| {
+				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
 					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
@@ -671,16 +671,16 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 			effective_time: BlockNumberFor<T>,
 		) -> DispatchResult {
-			<StableStakingPoolCheckpoint<T>>::try_mutate(&pool_id, |maybe_chekcpoint| {
-				if let Some(checkpoint) = maybe_chekcpoint {
+			<StableStakingPoolCheckpoint<T>>::try_mutate(&pool_id, |maybe_checkpoint| {
+				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*maybe_chekcpoint = Some(StakingInfo { effective_time, amount });
+					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
 				Ok(())
 			})?;
-			<UserStableStakingPoolCheckpoint<T>>::try_mutate(&pool_id, &who, |maybe_chekcpoint| {
-				if let Some(checkpoint) = maybe_chekcpoint {
+			<UserStableStakingPoolCheckpoint<T>>::try_mutate(&pool_id, &who, |maybe_checkpoint| {
+				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
 					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
@@ -739,7 +739,7 @@ pub mod pallet {
 					let distributed_reward: BalanceOf<T> = reward_pool * proportion;
 					T::Fungibles::transfer(
 						asset_id,
-						&Self::stable_toekn_beneficiary_account(),
+						&Self::stable_token_beneficiary_account(),
 						&who,
 						distributed_reward,
 						Preservation::Expendable,
@@ -767,7 +767,7 @@ pub mod pallet {
 					// Return notion
 					T::Fungibles::transfer(
 						asset_id,
-						&Self::stable_toekn_beneficiary_account(),
+						&Self::stable_token_beneficiary_account(),
 						&who,
 						user_scp.amount,
 						Preservation::Expendable,
