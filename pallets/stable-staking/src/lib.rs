@@ -11,7 +11,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, One, AtLeast32BitUnsigned},
+	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, One},
 	ArithmeticError, DispatchError, FixedPointOperand,
 };
 use sp_std::{fmt::Debug, prelude::*};
