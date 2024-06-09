@@ -208,8 +208,14 @@ pub mod pallet {
 	// weight That means if APY is low may leads to user not claiming their reward on purpose
 	#[pallet::storage]
 	#[pallet::getter(fn stable_staking_pool_epoch_reward)]
-	pub type StableStakingPoolEpochReward<T: Config> =
-		StorageMap<_, Twox64Concat, T::PoolId, u128, StableRewardInfo<BalanceOf<T>>, OptionQuery>;
+	pub type StableStakingPoolEpochReward<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		T::PoolId,
+		u128,
+		StableRewardInfo<BalanceOf<T>>,
+		OptionQuery,
+	>;
 
 	// Checkpoint of single stable staking pool
 	// For stable token reward distribution
