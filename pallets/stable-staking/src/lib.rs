@@ -13,8 +13,8 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, One},
-	ArithmeticError, DispatchError, FixedPointOperand, Perquintill,
+	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One},
+	ArithmeticError, FixedPointOperand, Perquintill, Saturating,
 };
 use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
 
@@ -116,9 +116,9 @@ pub struct PoolSetting<BlockNumber, Balance> {
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct StakingPoolMetadata<BoundedString> {
-	/// The user friendly name of this staking pool. Limited in length by `StringLimit`.
+	/// The user friendly name of this staking pool. Limited in length by `PoolStringLimit`.
 	pub name: BoundedString,
-	/// The short description for this staking pool. Limited in length by `StringLimit`.
+	/// The short description for this staking pool. Limited in length by `PoolStringLimit`.
 	pub description: BoundedString,
 }
 
@@ -172,7 +172,7 @@ pub mod pallet {
 
 		/// The maximum length of a pool name or short description stored on-chain.
 		#[pallet::constant]
-		type StringLimit: Get<u32>;
+		type PoolStringLimit: Get<u32>;
 	}
 
 	// Metadata of staking pools
@@ -182,7 +182,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::PoolId,
-		StakingPoolMetadata<BoundedVec<u8, <T as Config>::StringLimit>>,
+		StakingPoolMetadata<BoundedVec<u8, <T as Config>::PoolStringLimit>>,
 		OptionQuery,
 	>;
 
@@ -288,7 +288,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn aiusd_asset_id)]
 	pub type AIUSDAssetId<T: Config> =
-		StorageValue<_, <T::Fungibles as FsInspect>::AssetId, OptionQuery>;
+		StorageValue<_, <T::Fungibles as FsInspect<T::AccountId>>::AssetId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -315,7 +315,7 @@ pub mod pallet {
 		RewardUpdated {
 			pool_id: T::PoolId,
 			epoch: u128,
-			reward: BalanceOf<T>,
+			amount: BalanceOf<T>,
 		},
 		PendingStakingSolved {
 			who: T::AccountId,
@@ -347,7 +347,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		},
 		AIUSDRegisted {
-			asset_id: <T::Fungibles as FsInspect>::AssetId,
+			asset_id: <T::Fungibles as FsInspect<T::AccountId>>::AssetId,
 		},
 	}
 
@@ -386,7 +386,7 @@ pub mod pallet {
 		pub fn create_staking_pool(
 			origin: OriginFor<T>,
 			pool_id: T::PoolId,
-			setting: PoolSetting<BalanceOf<T>, BlockNumberFor<T>>,
+			setting: PoolSetting<BlockNumberFor<T>, BalanceOf<T>>,
 		) -> DispatchResult {
 			T::StakingPoolCommitteeOrigin::ensure_origin(origin)?;
 			ensure!(
@@ -421,10 +421,10 @@ pub mod pallet {
 			T::StakingPoolCommitteeOrigin::ensure_origin(origin)?;
 			ensure!(StakingPoolSetting::<T>::contains_key(&pool_id), Error::<T>::PoolNotExisted);
 			if let Some(name_inner) = name {
-				let bounded_name: BoundedVec<u8, T::StringLimit> =
+				let bounded_name: BoundedVec<u8, T::PoolStringLimit> =
 					name_inner.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 
-				let bounded_description: BoundedVec<u8, T::StringLimit> =
+				let bounded_description: BoundedVec<u8, T::PoolStringLimit> =
 					description.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 				<StakingPoolMetadata<T>>::insert(
 					pool_id,
@@ -470,7 +470,7 @@ pub mod pallet {
 					Self::deposit_event(Event::<T>::RewardUpdated {
 						pool_id,
 						epoch,
-						actual_reward,
+						amount: actual_reward,
 					});
 					let current_block = frame_system::Pallet::<T>::block_number();
 					let current_epoch = Self::get_epoch_index(pool_id, current_block)?;
@@ -480,7 +480,7 @@ pub mod pallet {
 			)?;
 
 			<StableStakingPoolReward<T>>::try_mutate(&pool_id, |maybe_reward| -> DispatchResult {
-				*maybe_reward = maybe_reward + actual_reward;
+				*maybe_reward = *maybe_reward + actual_reward;
 				Ok(())
 			})?;
 			Ok(())
@@ -498,7 +498,7 @@ pub mod pallet {
 			let source = ensure_signed(origin)?;
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let setting =
-				<StakingPoolSetting<T>>::get(&pool_id).ok_or(Error::<T>::PoolNotExisted)?;
+				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool started and not closed soon
 			ensure!(
 				setting.start_time < current_block &&
@@ -511,9 +511,9 @@ pub mod pallet {
 				pool_id,
 				current_block.checked_add(setting.setup_time).ok_or(Error::<T>::EpochOverflow)?,
 			)?
-			.checked_add(&One::one())
+			.checked_add(One::one())
 			.ok_or(Error::<T>::EpochOverflow)?;
-			let effective_time = Self::get_epoch_index(pool_id, effective_epoch)?;
+			let effective_time = Self::get_epoch_begin_time(pool_id, effective_epoch)?;
 			// Insert into pending storage waiting for hook to trigger
 			<PendingSetup<T>>::try_mutate(|maybe_order| {
 				let order = StakingInfoWithOwner {
@@ -524,12 +524,12 @@ pub mod pallet {
 				maybe_order.push_back(order);
 				// Make sure the first element has earlies effective time
 				maybe_order.make_contiguous().sort_by(|a, b| {
-					a.staking_info.effective_time.cmp(b.staking_info.effective_time)
+					a.staking_info.effective_time.cmp(&b.staking_info.effective_time)
 				});
 				Ok(())
 			})?;
 			// Native staking effect immediately
-			T::do_native_add(source, amount, current_block)?;
+			Self::do_native_add(source, amount, current_block)?;
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			T::Fungibles::transfer(
 				asset_id,
@@ -583,7 +583,7 @@ pub mod pallet {
 		pub fn withdraw(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
 			let source = ensure_signed(origin)?;
 			let setting =
-				<StakingPoolSetting<T>>::get(&pool_id).ok_or(Error::<T>::PoolNotExisted)?;
+				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool closed
 			let current_block = frame_system::Pallet::<T>::block_number();
 			ensure!(setting.end_time < current_block, Error::<T>::PoolInvalidForFurtherAction);
@@ -600,7 +600,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn regist_aiusd(
 			origin: OriginFor<T>,
-			asset_id: T::Fungibles::AssetId,
+			asset_id: <T::Fungibles as FsInspect<T::AccountId>>::AssetId,
 		) -> DispatchResult {
 			T::StakingPoolCommitteeOrigin::ensure_origin(origin)?;
 			<AIUSDAssetId<T>>::put(asset_id);
@@ -615,7 +615,7 @@ pub mod pallet {
 			time: BlockNumberFor<T>,
 		) -> Result<u128, sp_runtime::DispatchError> {
 			let setting =
-				<StakingPoolSetting<T>>::get(&pool_id).ok_or(Error::<T>::PoolNotExisted)?;
+				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// If start_time > time, means epoch 0
 			let index: u128 = time
 				.saturating_sub(setting.start_time)
@@ -630,7 +630,7 @@ pub mod pallet {
 			epoch: u128,
 		) -> Result<BlockNumberFor<T>, sp_runtime::DispatchError> {
 			let setting =
-				<StakingPoolSetting<T>>::get(&pool_id).ok_or(Error::<T>::PoolNotExisted)?;
+				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			let result = setting
 				.start_time
 				.checked_add(
@@ -695,10 +695,10 @@ pub mod pallet {
 			let beneficiary_account: T::AccountId = Self::native_token_beneficiary_account();
 			let current_block = frame_system::Pallet::<T>::block_number();
 			// NativeBalanceOf
-			let reward_pool = T::Fungible::balance(beneficiary_account);
+			let reward_pool = T::Fungible::balance(&beneficiary_account);
 
 			if let Some(ncp) = <NativeCheckpoint<T>>::get() {
-				if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(&who) {
+				if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(who) {
 					// get weight and update stake info
 					let proportion = Perquintill::from_rational(
 						user_ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
@@ -727,11 +727,11 @@ pub mod pallet {
 		fn do_stable_claim(who: T::AccountId, pool_id: T::PoolId) -> DispatchResult {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			// BalanceOf
-			let reward_pool = <StableStakingPoolReward<T>>::get(&pool_id);
+			let reward_pool = <StableStakingPoolReward<T>>::get(pool_id);
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 
-			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(&pool_id) {
-				if let Some(user_scp) = <UserStableStakingPoolCheckpoint<T>>::get(&who, &pool_id) {
+			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id) {
+				if let Some(user_scp) = <UserStableStakingPoolCheckpoint<T>>::get(who, pool_id) {
 					// get weight and update stake info
 					let proportion = Perquintill::from_rational(
 						user_scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
@@ -763,8 +763,8 @@ pub mod pallet {
 		fn do_withdraw(who: T::AccountId, pool_id: T::PoolId) -> DispatchResult {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
-			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(&pool_id) {
-				if let Some(user_scp) = <UserStableStakingPoolCheckpoint<T>>::get(&who, &pool_id) {
+			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id) {
+				if let Some(user_scp) = <UserStableStakingPoolCheckpoint<T>>::get(who, pool_id) {
 					// Return notion
 					T::Fungibles::transfer(
 						asset_id,
@@ -783,16 +783,16 @@ pub mod pallet {
 						<NativeCheckpoint<T>>::put(ncp);
 					}
 					// Clean user stable staking storage
-					<UserStableStakingPoolCheckpoint<T>>::remove(&who, &pool_id);
+					<UserStableStakingPoolCheckpoint<T>>::remove(who, pool_id);
 					// Clean user native staking storage if zero, modify otherwise
-					if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(&who) {
+					if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(who) {
 						if user_ncp.amount == user_scp.amount.try_into()? {
-							<UserNativeCheckpoint<T>>::remove(&who);
+							<UserNativeCheckpoint<T>>::remove(who);
 						} else {
 							user_ncp
 								.withdraw(user_scp.amount.try_into()?)
 								.ok_or(ArithmeticError::Overflow)?;
-							<UserNativeCheckpoint<T>>::insert(&who, user_ncp);
+							<UserNativeCheckpoint<T>>::insert(who, user_ncp);
 						}
 					}
 
@@ -834,6 +834,7 @@ pub mod pallet {
 				}
 				<PendingSetup<T>>::put(pending_setup);
 			}
+			Ok(())
 		}
 
 		pub fn native_token_beneficiary_account() -> T::AccountId {

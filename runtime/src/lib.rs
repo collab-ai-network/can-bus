@@ -514,7 +514,7 @@ impl pallet_stable_staking::Config for Runtime {
 	type Fungible = Balances;
 	type StableTokenBeneficiaryId = StakingPoolId;
 	type NativeTokenBeneficiaryId = HavlingMintId;
-	type StringLimit = ConstU32<100>;
+	type PoolStringLimit = ConstU32<100>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
