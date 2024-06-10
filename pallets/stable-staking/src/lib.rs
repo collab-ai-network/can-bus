@@ -635,10 +635,11 @@ pub mod pallet {
 			let setting =
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// If start_time > time, means epoch 0
-			let index: u128 = time
+			let index_bn = time
 				.saturating_sub(setting.start_time)
-				.saturating_div(setting.epoch_range)
-				.try_into()?;
+				.checked_div(setting.epoch_range)
+				.ok_or(ArithmeticError::Overflow)?;
+			let index: u128 = index_bn.try_into().or(Err(ArithmeticError::Overflow))?;
 			ensure!(index < setting.epoch, Error::<T>::EpochOverflow);
 			return Ok(index)
 		}
@@ -724,7 +725,11 @@ pub mod pallet {
 						user_ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
 						ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
 					);
-					let distributed_reward: NativeBalanceOf<T> = reward_pool * proportion;
+					let reward_pool_u128: u128 =
+						reward_pool.try_into().or(Err(ArithmeticError::Overflow))?;
+					let distributed_reward_u128: u128 = reward_pool_u128 * proportion;
+					let distributed_reward: NativeBalanceOf<T> =
+						distributed_reward_u128.try_into().or(Err(ArithmeticError::Overflow))?;
 					T::Fungible::transfer(
 						&beneficiary_account,
 						&who,
