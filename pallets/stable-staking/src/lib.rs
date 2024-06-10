@@ -718,8 +718,8 @@ pub mod pallet {
 			// NativeBalanceOf
 			let reward_pool = T::Fungible::balance(&beneficiary_account);
 
-			if let Some(ncp) = <NativeCheckpoint<T>>::get() {
-				if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(who) {
+			if let Some(mut ncp) = <NativeCheckpoint<T>>::get() {
+				if let Some(mut user_ncp) = <UserNativeCheckpoint<T>>::get(who) {
 					// get weight and update stake info
 					let proportion = Perquintill::from_rational(
 						user_ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
@@ -762,7 +762,11 @@ pub mod pallet {
 						user_scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
 						scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
 					);
-					let distributed_reward: BalanceOf<T> = proportion * reward_pool;
+					let reward_pool_u128: u128 =
+						reward_pool.try_into().or(Err(ArithmeticError::Overflow))?;
+					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
+					let distributed_reward: BalanceOf<T> =
+						distributed_reward_u128.try_into().or(Err(ArithmeticError::Overflow))?;
 					T::Fungibles::transfer(
 						asset_id,
 						&Self::stable_token_beneficiary_account(),
