@@ -411,7 +411,7 @@ pub mod pallet {
 				!StakingPoolSetting::<T>::contains_key(&pool_id),
 				Error::<T>::PoolAlreadyExisted
 			);
-			<StakingPoolSetting<T>>::insert(pool_id, setting.clone());
+			<StakingPoolSetting<T>>::insert(pool_id.clone(), setting.clone());
 			Self::deposit_event(Event::StakingPoolCreated {
 				pool_id,
 				start_time: setting.start_time,
@@ -545,7 +545,7 @@ pub mod pallet {
 				});
 			});
 			// Native staking effect immediately
-			Self::do_native_add(source, amount, current_block)?;
+			Self::do_native_add(source.clone(), amount, current_block)?;
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			T::Fungibles::transfer(
 				asset_id,
@@ -600,7 +600,7 @@ pub mod pallet {
 		pub fn withdraw(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
 			let source = ensure_signed(origin)?;
 			let setting =
-				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
+				<StakingPoolSetting<T>>::get(pool_id.clone()).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool closed
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
@@ -649,13 +649,11 @@ pub mod pallet {
 		) -> Result<BlockNumberFor<T>, sp_runtime::DispatchError> {
 			let setting =
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
+			let epoch_bn: BlockNumberFor<T> = epoch.try_into()?;
 			let result = setting
 				.start_time
 				.checked_add(
-					&setting
-						.epoch_range
-						.checked_mul(epoch.try_into()?)
-						.ok_or(Error::<T>::EpochOverflow)?,
+					&setting.epoch_range.checked_mul(epoch_bn).ok_or(Error::<T>::EpochOverflow)?,
 				)
 				.ok_or(Error::<T>::EpochOverflow)?;
 			return Ok(result)
@@ -673,7 +671,7 @@ pub mod pallet {
 				} else {
 					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
-				Ok(())
+				Ok::<(), DispatchError>(())
 			})?;
 			<UserNativeCheckpoint<T>>::try_mutate(&who, |maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
@@ -699,7 +697,7 @@ pub mod pallet {
 				} else {
 					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
-				Ok(())
+				Ok::<(), DispatchError>(())
 			})?;
 			<UserStableStakingPoolCheckpoint<T>>::try_mutate(&who, &pool_id, |maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
@@ -707,7 +705,7 @@ pub mod pallet {
 				} else {
 					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
-				Ok(())
+				Ok::<(), DispatchError>(())
 			})?;
 			Ok(())
 		}
@@ -801,20 +799,23 @@ pub mod pallet {
 					scp.withdraw(user_scp.amount).ok_or(ArithmeticError::Overflow)?;
 					<StableStakingPoolCheckpoint<T>>::insert(&pool_id, scp);
 					// Correct global native staking pool
+					// stable token balance type
+					let user_scp_amount_sb: BalanceOf<T> = user_scp.amount.try_into()?;
+					// native token balance type
+					let user_scp_amount_nb: NativeBalanceOf<T> = user_scp.amount.try_into()?;
 					if let Some(ncp) = <NativeCheckpoint<T>>::get() {
-						ncp.withdraw(user_scp.amount.try_into()?)
-							.ok_or(ArithmeticError::Overflow)?;
+						ncp.withdraw(user_scp_amount_sb).ok_or(ArithmeticError::Overflow)?;
 						<NativeCheckpoint<T>>::put(ncp);
 					}
 					// Clean user stable staking storage
 					<UserStableStakingPoolCheckpoint<T>>::remove(who, pool_id);
 					// Clean user native staking storage if zero, modify otherwise
 					if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(who) {
-						if user_ncp.amount == user_scp.amount.try_into()? {
+						if user_ncp.amount == user_scp_amount_nb {
 							<UserNativeCheckpoint<T>>::remove(who);
 						} else {
 							user_ncp
-								.withdraw(user_scp.amount.try_into()?)
+								.withdraw(user_scp_amount_nb)
 								.ok_or(ArithmeticError::Overflow)?;
 							<UserNativeCheckpoint<T>>::insert(who, user_ncp);
 						}
@@ -834,7 +835,7 @@ pub mod pallet {
 		fn solve_pending(n: BlockNumberFor<T>) -> DispatchResult {
 			let pending_setup = <PendingSetup<T>>::take();
 			loop {
-				match pending_setup.pop_front(0) {
+				match pending_setup.pop_front() {
 					// Latest Pending tx effective
 					Some(x) if x.staking_info.effective_time <= n => {
 						Self::do_stable_add(x.who, x.pool_id, x.staking_info.amount, n)?;
