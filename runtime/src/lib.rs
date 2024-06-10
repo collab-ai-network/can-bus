@@ -538,6 +538,7 @@ construct_runtime!(
 		BridgeTransfer: pallet_bridge_transfer = 14,
 		Template: pallet_template = 15,
 		HalvingMint: pallet_halving_mint = 16,
+		StableStaking: pallet_stable_staking = 17,
 	}
 );
 
