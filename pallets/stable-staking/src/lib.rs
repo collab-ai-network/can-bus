@@ -805,7 +805,7 @@ pub mod pallet {
 					// stable token balance type
 					let user_scp_amount_sb: BalanceOf<T> =
 						user_scp.amount.try_into().or(Err(ArithmeticError::Overflow))?;
-					if let Some(mut scp) = scp.withdraw(user_scp_)ncp) = <NativeCheckpoint<T>>::get() {
+					if let Some(mut ncp) = <NativeCheckpoint<T>>::get() {
 						ncp.withdraw(user_scp_amount_sb).ok_or(ArithmeticError::Overflow)?;
 						<NativeCheckpoint<T>>::put(ncp);
 					}
