@@ -727,7 +727,7 @@ pub mod pallet {
 					);
 					let reward_pool_u128: u128 =
 						reward_pool.try_into().or(Err(ArithmeticError::Overflow))?;
-					let distributed_reward_u128: u128 = reward_pool_u128 * proportion;
+					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
 					let distributed_reward: NativeBalanceOf<T> =
 						distributed_reward_u128.try_into().or(Err(ArithmeticError::Overflow))?;
 					T::Fungible::transfer(
