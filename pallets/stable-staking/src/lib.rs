@@ -637,7 +637,7 @@ pub mod pallet {
 			// If start_time > time, means epoch 0
 			let index_bn = time
 				.saturating_sub(setting.start_time)
-				.checked_div(setting.epoch_range)
+				.checked_div(&setting.epoch_range)
 				.ok_or(ArithmeticError::Overflow)?;
 			let index: u128 = index_bn.try_into().or(Err(ArithmeticError::Overflow))?;
 			ensure!(index < setting.epoch, Error::<T>::EpochOverflow);
