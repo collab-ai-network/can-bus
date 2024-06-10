@@ -649,7 +649,8 @@ pub mod pallet {
 		) -> Result<BlockNumberFor<T>, sp_runtime::DispatchError> {
 			let setting =
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
-			let epoch_bn: BlockNumberFor<T> = epoch.try_into().or(ArithmeticError::Overflow)?;
+			let epoch_bn: BlockNumberFor<T> =
+				epoch.try_into().or(Err(ArithmeticError::Overflow))?;
 			let result = setting
 				.start_time
 				.checked_add(
@@ -662,12 +663,12 @@ pub mod pallet {
 		// For native_staking
 		fn do_native_add(
 			who: T::AccountId,
-			amount: BalanceOf<T>,
+			amount: NativeBalanceOf<T>,
 			effective_time: BlockNumberFor<T>,
 		) -> DispatchResult {
 			<NativeCheckpoint<T>>::try_mutate(|maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
-					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
+					checkpoint.add(effective_time, amount).ok_or(Err(ArithmeticError::Overflow))?;
 				} else {
 					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
@@ -801,12 +802,12 @@ pub mod pallet {
 					// Correct global native staking pool
 					// stable token balance type
 					let user_scp_amount_sb: BalanceOf<T> =
-						user_scp.amount.try_into().or(ArithmeticError::Overflow)?;
+						user_scp.amount.try_into().or(Err(ArithmeticError::Overflow))?;
 					// native token balance type
 					let user_scp_amount_nb: NativeBalanceOf<T> =
-						user_scp.amount.try_into().or(ArithmeticError::Overflow)?;
+						user_scp.amount.try_into().or(Err(ArithmeticError::Overflow))?;
 					if let Some(ncp) = <NativeCheckpoint<T>>::get() {
-						ncp.withdraw(user_scp_amount_sb).ok_or(ArithmeticError::Overflow)?;
+						ncp.withdraw(user_scp_amount_nb).ok_or(ArithmeticError::Overflow)?;
 						<NativeCheckpoint<T>>::put(ncp);
 					}
 					// Clean user stable staking storage
