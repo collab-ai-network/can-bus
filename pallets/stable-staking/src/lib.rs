@@ -545,7 +545,7 @@ pub mod pallet {
 				});
 			});
 			// Native staking effect immediately
-			Self::do_native_add(source.clone(), amount_n, current_block)?;
+			Self::do_native_add(source.clone(), amount, current_block)?;
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			T::Fungibles::transfer(
 				asset_id,
@@ -786,8 +786,10 @@ pub mod pallet {
 		fn do_withdraw(who: T::AccountId, pool_id: T::PoolId) -> DispatchResult {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
-			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id) {
-				if let Some(user_scp) = <UserStableStakingPoolCheckpoint<T>>::get(who, pool_id) {
+			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id.clone()) {
+				if let Some(user_scp) =
+					<UserStableStakingPoolCheckpoint<T>>::get(who.clone(), pool_id.clone())
+				{
 					// Return notion
 					T::Fungibles::transfer(
 						asset_id,
@@ -808,16 +810,16 @@ pub mod pallet {
 						<NativeCheckpoint<T>>::put(ncp);
 					}
 					// Clean user stable staking storage
-					<UserStableStakingPoolCheckpoint<T>>::remove(who, pool_id);
+					<UserStableStakingPoolCheckpoint<T>>::remove(who.clone(), pool_id.clone());
 					// Clean user native staking storage if zero, modify otherwise
-					if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(who) {
+					if let Some(mut user_ncp) = <UserNativeCheckpoint<T>>::get(who.clone()) {
 						if user_ncp.amount == user_scp_amount_sb {
-							<UserNativeCheckpoint<T>>::remove(who);
+							<UserNativeCheckpoint<T>>::remove(who.clone());
 						} else {
 							user_ncp
 								.withdraw(user_scp_amount_sb)
 								.ok_or(ArithmeticError::Overflow)?;
-							<UserNativeCheckpoint<T>>::insert(who, user_ncp);
+							<UserNativeCheckpoint<T>>::insert(who.clone(), user_ncp);
 						}
 					}
 
