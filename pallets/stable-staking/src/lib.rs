@@ -267,7 +267,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn native_checkpoint)]
 	pub type NativeCheckpoint<T: Config> =
-		StorageValue<_, StakingInfo<BlockNumberFor<T>, NativeBalanceOf<T>>, OptionQuery>;
+		StorageValue<_, StakingInfo<BlockNumberFor<T>, BalanceOf<T>>, OptionQuery>;
 
 	// Checkpoint of overall staking condition of a single user synthetic by tracking all staking
 	// pool For native token reward distribution
@@ -278,7 +278,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::AccountId,
-		StakingInfo<BlockNumberFor<T>, NativeBalanceOf<T>>,
+		StakingInfo<BlockNumberFor<T>, BalanceOf<T>>,
 		OptionQuery,
 	>;
 
@@ -545,7 +545,7 @@ pub mod pallet {
 				});
 			});
 			// Native staking effect immediately
-			Self::do_native_add(source.clone(), amount, current_block)?;
+			Self::do_native_add(source.clone(), amount_n, current_block)?;
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			T::Fungibles::transfer(
 				asset_id,
@@ -663,12 +663,12 @@ pub mod pallet {
 		// For native_staking
 		fn do_native_add(
 			who: T::AccountId,
-			amount: NativeBalanceOf<T>,
+			amount: BalanceOf<T>,
 			effective_time: BlockNumberFor<T>,
 		) -> DispatchResult {
 			<NativeCheckpoint<T>>::try_mutate(|maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
-					checkpoint.add(effective_time, amount).ok_or(Err(ArithmeticError::Overflow))?;
+					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
 					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
 				}
@@ -803,22 +803,19 @@ pub mod pallet {
 					// stable token balance type
 					let user_scp_amount_sb: BalanceOf<T> =
 						user_scp.amount.try_into().or(Err(ArithmeticError::Overflow))?;
-					// native token balance type
-					let user_scp_amount_nb: NativeBalanceOf<T> =
-						user_scp.amount.try_into().or(Err(ArithmeticError::Overflow))?;
 					if let Some(ncp) = <NativeCheckpoint<T>>::get() {
-						ncp.withdraw(user_scp_amount_nb).ok_or(ArithmeticError::Overflow)?;
+						ncp.withdraw(user_scp_amount_sb).ok_or(ArithmeticError::Overflow)?;
 						<NativeCheckpoint<T>>::put(ncp);
 					}
 					// Clean user stable staking storage
 					<UserStableStakingPoolCheckpoint<T>>::remove(who, pool_id);
 					// Clean user native staking storage if zero, modify otherwise
 					if let Some(user_ncp) = <UserNativeCheckpoint<T>>::get(who) {
-						if user_ncp.amount == user_scp_amount_nb {
+						if user_ncp.amount == user_scp_amount_sb {
 							<UserNativeCheckpoint<T>>::remove(who);
 						} else {
 							user_ncp
-								.withdraw(user_scp_amount_nb)
+								.withdraw(user_scp_amount_sb)
 								.ok_or(ArithmeticError::Overflow)?;
 							<UserNativeCheckpoint<T>>::insert(who, user_ncp);
 						}
