@@ -762,7 +762,7 @@ pub mod pallet {
 						user_scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
 						scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
 					);
-					let distributed_reward: BalanceOf<T> = reward_pool * proportion;
+					let distributed_reward: BalanceOf<T> = proportion * reward_pool;
 					T::Fungibles::transfer(
 						asset_id,
 						&Self::stable_token_beneficiary_account(),
