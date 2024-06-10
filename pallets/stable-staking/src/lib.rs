@@ -14,10 +14,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
-		One,
-	},
+	traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, One},
 	ArithmeticError, Perquintill, Saturating,
 };
 use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
