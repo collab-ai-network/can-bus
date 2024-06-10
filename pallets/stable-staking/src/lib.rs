@@ -267,7 +267,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn native_checkpoint)]
 	pub type NativeCheckpoint<T: Config> =
-		StorageValue<_, StakingInfo<BlockNumberFor<T>, BalanceOf<T>>, OptionQuery>;
+		StorageValue<_, StakingInfo<BlockNumberFor<T>, NativeBalanceOf<T>>, OptionQuery>;
 
 	// Checkpoint of overall staking condition of a single user synthetic by tracking all staking
 	// pool For native token reward distribution
@@ -278,7 +278,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::AccountId,
-		StakingInfo<BlockNumberFor<T>, BalanceOf<T>>,
+		StakingInfo<BlockNumberFor<T>, NativeBalanceOf<T>>,
 		OptionQuery,
 	>;
 
@@ -649,11 +649,11 @@ pub mod pallet {
 		) -> Result<BlockNumberFor<T>, sp_runtime::DispatchError> {
 			let setting =
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
-			let epoch_bn: BlockNumberFor<T> = epoch.try_into()?;
+			let epoch_bn: BlockNumberFor<T> = epoch.try_into().or(ArithmeticError::Overflow)?;
 			let result = setting
 				.start_time
 				.checked_add(
-					&setting.epoch_range.checked_mul(epoch_bn).ok_or(Error::<T>::EpochOverflow)?,
+					&setting.epoch_range.checked_mul(&epoch_bn).ok_or(Error::<T>::EpochOverflow)?,
 				)
 				.ok_or(Error::<T>::EpochOverflow)?;
 			return Ok(result)
@@ -800,9 +800,11 @@ pub mod pallet {
 					<StableStakingPoolCheckpoint<T>>::insert(&pool_id, scp);
 					// Correct global native staking pool
 					// stable token balance type
-					let user_scp_amount_sb: BalanceOf<T> = user_scp.amount.try_into()?;
+					let user_scp_amount_sb: BalanceOf<T> =
+						user_scp.amount.try_into().or(ArithmeticError::Overflow)?;
 					// native token balance type
-					let user_scp_amount_nb: NativeBalanceOf<T> = user_scp.amount.try_into()?;
+					let user_scp_amount_nb: NativeBalanceOf<T> =
+						user_scp.amount.try_into().or(ArithmeticError::Overflow)?;
 					if let Some(ncp) = <NativeCheckpoint<T>>::get() {
 						ncp.withdraw(user_scp_amount_sb).ok_or(ArithmeticError::Overflow)?;
 						<NativeCheckpoint<T>>::put(ncp);
@@ -833,12 +835,17 @@ pub mod pallet {
 		}
 
 		fn solve_pending(n: BlockNumberFor<T>) -> DispatchResult {
-			let pending_setup = <PendingSetup<T>>::take();
+			let mut pending_setup = <PendingSetup<T>>::take();
 			loop {
 				match pending_setup.pop_front() {
 					// Latest Pending tx effective
 					Some(x) if x.staking_info.effective_time <= n => {
-						Self::do_stable_add(x.who, x.pool_id, x.staking_info.amount, n)?;
+						Self::do_stable_add(
+							x.who.clone(),
+							x.pool_id.clone(),
+							x.staking_info.amount,
+							n,
+						)?;
 						Self::deposit_event(Event::<T>::PendingStakingSolved {
 							who: x.who,
 							pool_id: x.pool_id,
