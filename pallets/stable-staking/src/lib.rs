@@ -18,7 +18,7 @@ use sp_runtime::{
 		AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
 		One,
 	},
-	ArithmeticError, FixedPointOperand, Perquintill, Saturating,
+	ArithmeticError, Perquintill, Saturating,
 };
 use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
 
@@ -122,7 +122,7 @@ where
 		let er: u128 = self.epoch_range.try_into().ok()?;
 		let st: u128 = self.start_time.try_into().ok()?;
 		let result = st.checked_add(er.checked_mul(self.epoch)?)?;
-		Some(result.try_into().ok()?)
+		result.try_into().ok()
 	}
 }
 
@@ -385,7 +385,8 @@ pub mod pallet {
 			if let Some(latest_pending_setup) = <PendingSetup<T>>::get().get(0) {
 				// Only trigger if latest pending is effective
 				if latest_pending_setup.staking_info.effective_time <= n {
-					Self::solve_pending(n);
+					// Even if we fail to solve_pending, we can not allow error out
+					let _ = Self::solve_pending(n);
 				}
 			}
 			Weight::zero()
