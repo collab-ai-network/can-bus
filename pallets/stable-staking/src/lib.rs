@@ -786,7 +786,7 @@ pub mod pallet {
 		fn do_withdraw(who: T::AccountId, pool_id: T::PoolId) -> DispatchResult {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
-			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id.clone()) {
+			if let Some(mut scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id.clone()) {
 				if let Some(user_scp) =
 					<UserStableStakingPoolCheckpoint<T>>::get(who.clone(), pool_id.clone())
 				{
@@ -805,7 +805,7 @@ pub mod pallet {
 					// stable token balance type
 					let user_scp_amount_sb: BalanceOf<T> =
 						user_scp.amount.try_into().or(Err(ArithmeticError::Overflow))?;
-					if let Some(ncp) = <NativeCheckpoint<T>>::get() {
+					if let Some(mut scp) = scp.withdraw(user_scp_)ncp) = <NativeCheckpoint<T>>::get() {
 						ncp.withdraw(user_scp_amount_sb).ok_or(ArithmeticError::Overflow)?;
 						<NativeCheckpoint<T>>::put(ncp);
 					}
