@@ -719,7 +719,7 @@ pub mod pallet {
 			let reward_pool = T::Fungible::balance(&beneficiary_account);
 
 			if let Some(mut ncp) = <NativeCheckpoint<T>>::get() {
-				if let Some(mut user_ncp) = <UserNativeCheckpoint<T>>::get(who) {
+				if let Some(mut user_ncp) = <UserNativeCheckpoint<T>>::get(who.clone()) {
 					// get weight and update stake info
 					let proportion = Perquintill::from_rational(
 						user_ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
@@ -752,11 +752,13 @@ pub mod pallet {
 		fn do_stable_claim(who: T::AccountId, pool_id: T::PoolId) -> DispatchResult {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			// BalanceOf
-			let reward_pool = <StableStakingPoolReward<T>>::get(pool_id);
+			let reward_pool = <StableStakingPoolReward<T>>::get(pool_id.clone());
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 
-			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id) {
-				if let Some(user_scp) = <UserStableStakingPoolCheckpoint<T>>::get(who, pool_id) {
+			if let Some(mut scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id.clone()) {
+				if let Some(mut user_scp) =
+					<UserStableStakingPoolCheckpoint<T>>::get(who.clone(), pool_id.clone())
+				{
 					// get weight and update stake info
 					let proportion = Perquintill::from_rational(
 						user_scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
