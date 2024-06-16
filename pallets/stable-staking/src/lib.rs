@@ -39,10 +39,7 @@ pub struct StakingInfo<BlockNumber, Balance> {
 
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
 pub struct StakingInfoWithOwner<AccountId, PoolId, StakingInfo> {
-	// For a single position or
-	// Synthetic overall average effective_time weighted by staked amount
 	who: AccountId,
-	// Staked amount
 	pool_id: PoolId,
 	staking_info: StakingInfo,
 }
