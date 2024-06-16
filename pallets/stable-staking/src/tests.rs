@@ -1,12 +1,12 @@
 use super::{
 	mock::{
-		assert_events, balances, new_test_ext, Assets, Balances, RuntimeCall, RuntimeEvent,
+		assert_events, new_test_ext, Assets, Balances, HavlingMintId, RuntimeCall, RuntimeEvent,
 		RuntimeOrigin, StableStaking, System, Test, ENDOWED_BALANCE, USER_A, USER_B, USER_C,
 	},
-	pallet_stable_staking, *,
+	*,
 };
 use frame_support::{assert_noop, assert_ok};
-use hex_literal::hex;
+use frame_system::EnsureRoot;
 use sp_runtime::ArithmeticError;
 
 fn next_block() {
@@ -25,7 +25,7 @@ fn can_not_create_pool_already_started_or_existed() {
 	new_test_ext().execute_with(|| {
 		fast_forward_to(101);
 		// Create stable staking pool
-		let pool_setup: PoolSetting = PoolSetting {
+		let pool_setup: PoolSetting<u64, u64> = PoolSetting {
 			start_time: 100u64,
 			epoch: 10u128,
 			epoch_range: 100u64,
@@ -60,7 +60,10 @@ fn update_reward_successful_and_failed() {
 		})]);
 		// Staking pool reward storage efffective
 		assert_eq!(StableStaking::stable_staking_pool_reward(1u128), 2000u64);
-		assert_eq!(StableStaking::stable_staking_pool_epoch_reward(1u128, 0u128), Some(2000u64));
+		assert_eq!(
+			StableStaking::stable_staking_pool_epoch_reward(1u128, 0u128),
+			Some(StableRewardInfo { epoch: 0u128, reward_amount: 2000u64 })
+		);
 		assert_eq!(StableStaking::stable_staking_pool_epoch_reward(1u128, 1u128), None);
 		// Staking pool balance effective
 		let native_token_pool = HavlingMintId::get().into_account_truncating();
@@ -149,7 +152,7 @@ fn stake_successful_and_failed() {
 			StakingInfo { effective_time: 301, amount: 2000u64, last_add_time: 301 }
 		);
 		let pending_set_up = StableStaking::pending_setup();
-		assert_eq(pending_set_up.len(), 1);
+		assert_eq!(pending_set_up.len(), 1);
 		let pending_set_up_element = pending_set_up.get(0).unwrap();
 		// Pool set up time = 200
 		// So user enter at 301 need to wait till 600 to make it effective and receiving Stable
@@ -190,7 +193,7 @@ fn stake_successful_and_failed() {
 		);
 		// Pending set up storage change
 		let pending_set_up = StableStaking::pending_setup();
-		assert_eq(pending_set_up.len(), 2);
+		assert_eq!(pending_set_up.len(), 2);
 		// Pool set up time = 200
 		// So user enter at 311 need to wait till 600 to make it effective and receiving Stable
 		// staking reward

@@ -21,7 +21,6 @@ use frame_support::{
 	PalletId,
 };
 use hex_literal::hex;
-use pallet_assets_handler::AssetInfo;
 use sp_core::{ConstU16, H256};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
