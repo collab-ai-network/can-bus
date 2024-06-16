@@ -654,7 +654,7 @@ pub mod pallet {
 			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
 			ensure!(end_time < current_block, Error::<T>::PoolNotEnded);
 			// Claim reward
-			Self::do_native_claim(source.clone(), current_block.clone())?;
+			Self::do_native_claim(source.clone(), current_block)?;
 			Self::do_stable_claim(source.clone(), pool_id.clone(), current_block)?;
 			// Withdraw and clean/modify all storage
 			Self::do_withdraw(source, pool_id)
