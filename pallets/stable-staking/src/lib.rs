@@ -19,6 +19,12 @@ use sp_runtime::{
 };
 use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
 pub struct StakingInfo<BlockNumber, Balance> {
 	// For a single position or
@@ -26,6 +32,9 @@ pub struct StakingInfo<BlockNumber, Balance> {
 	effective_time: BlockNumber,
 	// Staked amount
 	amount: Balance,
+	// This is recorded for not allowing weight calculation when time < some of history effective
+	// time
+	last_add_time: BlockNumber,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
@@ -55,6 +64,10 @@ where
 	// Notice: The logic will be wrong if weight calculated time is before any single added
 	// effective_time
 	fn add(&mut self, effective_time: BlockNumber, amount: Balance) -> Option<()> {
+		// If last_add_time always > effective_time, only new added effective time can effect
+		// last_add_time
+		self.last_add_time = self.last_add_time.max(effective_time);
+
 		// We try force all types into u128, then convert it back
 		let e: u128 = effective_time.try_into().ok()?;
 		let s: u128 = amount.try_into().ok()?;
@@ -73,10 +86,24 @@ where
 
 	// Claim/Update stake info and return the consumed weight
 	fn claim(&mut self, n: BlockNumber) -> Option<u128> {
+		// Claim time before last_add_time is not allowed, since weight can not be calculated
 		let weight = self.weight(n)?;
 		self.effective_time = n;
 
 		Some(weight)
+	}
+
+	// consume corresponding weight, change effective time without changing staked amount, return
+	// the changed effective time This function is mostly used for synetic checkpoint change
+	fn claim_based_on_weight(&mut self, weight: u128) -> Option<BlockNumber> {
+		let oe: u128 = self.effective_time.try_into().ok()?;
+		let os: u128 = self.amount.try_into().ok()?;
+
+		let delta_e: u128 = weight.checked_div(&os)?;
+		let new_effective_time: BlockNumber = (oe + delta_e).try_into().ok()?;
+		self.effective_time = new_effective_time;
+
+		Some(new_effective_time)
 	}
 
 	// Withdraw staking amount and return the amount after withdrawal
@@ -89,6 +116,18 @@ where
 	// You should never use n < any single effective_time
 	// it only works for n > all effective_time
 	fn weight(&self, n: BlockNumber) -> Option<u128> {
+		// Estimate weight before last_add_time can be biased so not allowed
+		if self.last_add_time > n {
+			return None;
+		}
+
+		let e: u128 = n.checked_sub(&self.effective_time)?.try_into().ok()?;
+		let s: u128 = self.amount.try_into().ok()?;
+		e.checked_mul(s)
+	}
+
+	// Force estimate weight regardless
+	fn weight_force(&self, n: BlockNumber) -> Option<u128> {
 		let e: u128 = n.checked_sub(&self.effective_time)?.try_into().ok()?;
 		let s: u128 = self.amount.try_into().ok()?;
 		e.checked_mul(s)
@@ -342,13 +381,13 @@ pub mod pallet {
 		},
 		NativeRewardClaimed {
 			who: T::AccountId,
-			time: BlockNumberFor<T>,
+			until_time: BlockNumberFor<T>,
 			amount: NativeBalanceOf<T>,
 		},
 		StableRewardClaimed {
 			who: T::AccountId,
 			pool_id: T::PoolId,
-			time: BlockNumberFor<T>,
+			until_time: BlockNumberFor<T>,
 			amount: BalanceOf<T>,
 		},
 		Withdraw {
@@ -366,13 +405,15 @@ pub mod pallet {
 	pub enum Error<T> {
 		RewardAlreadyExisted,
 		PoolAlreadyStarted,
+		PoolAlreadyEnded,
 		PoolAlreadyExisted,
 		PoolNotExisted,
-		PoolInvalidForFurtherAction,
+		PoolNotStarted,
 		BadMetadata,
-		EpochOverflow,
 		EpochAlreadyEnded,
+		EpochNotExisted,
 		NoAssetId,
+		TypeIncompatible,
 	}
 
 	#[pallet::hooks]
@@ -392,7 +433,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Stores an asset id on chain under an associated resource ID.
+		/// Create a staking pool
 		#[pallet::call_index(0)]
 		#[pallet::weight({1000})]
 		pub fn create_staking_pool(
@@ -450,10 +491,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Removes a resource ID from the resource mapping.
-		///
-		/// After this call, bridge transfers with the associated resource ID will
-		/// be rejected.
+		/// Update a reward for a staking pool of specific epoch
+		/// Each epoch can be only updated once
 		#[pallet::call_index(2)]
 		#[pallet::weight({1000})]
 		#[transactional]
@@ -464,6 +503,15 @@ pub mod pallet {
 			reward: BalanceOf<T>,
 		) -> DispatchResult {
 			T::StakingPoolCommitteeOrigin::ensure_origin(origin)?;
+
+			let current_block = frame_system::Pallet::<T>::block_number();
+			// get_epoch_index return setting.epoch if time > pool end time
+			let current_epoch = Self::get_epoch_index(pool_id.clone(), current_block)?;
+			let setting =
+				<StakingPoolSetting<T>>::get(pool_id.clone()).ok_or(Error::<T>::PoolNotExisted)?;
+			// Yes.. This allow update epoch = "last" epoch, no matter how expired it is.
+			ensure!(setting.epoch >= epoch, Error::<T>::EpochNotExisted);
+			ensure!(current_epoch <= epoch, Error::<T>::EpochAlreadyEnded);
 
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			let actual_reward = T::Fungibles::mint_into(
@@ -484,9 +532,6 @@ pub mod pallet {
 						epoch,
 						amount: actual_reward,
 					});
-					let current_block = frame_system::Pallet::<T>::block_number();
-					let current_epoch = Self::get_epoch_index(pool_id.clone(), current_block)?;
-					ensure!(current_epoch <= epoch, Error::<T>::EpochAlreadyEnded);
 					Ok(())
 				},
 			)?;
@@ -513,28 +558,30 @@ pub mod pallet {
 				<StakingPoolSetting<T>>::get(pool_id.clone()).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool started and not closed soon
 			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
-			ensure!(
-				setting.start_time < current_block &&
-					end_time > (current_block + setting.setup_time),
-				Error::<T>::PoolInvalidForFurtherAction
-			);
+			ensure!(setting.start_time < current_block, Error::<T>::PoolNotStarted);
 
 			// Try get the beginning block of latest incoming valid epoch for pending staking
 			let effective_epoch = Self::get_epoch_index(
 				pool_id.clone(),
 				current_block
 					.checked_add(&setting.setup_time)
-					.ok_or(Error::<T>::EpochOverflow)?,
+					.ok_or(ArithmeticError::Overflow)?,
 			)?
 			.checked_add(One::one())
-			.ok_or(Error::<T>::EpochOverflow)?;
+			.ok_or(ArithmeticError::Overflow)?;
 			let effective_time = Self::get_epoch_begin_time(pool_id.clone(), effective_epoch)?;
+			ensure!(end_time > effective_time, Error::<T>::PoolAlreadyEnded);
+
 			// Insert into pending storage waiting for hook to trigger
 			<PendingSetup<T>>::mutate(|maybe_order| {
 				let order = StakingInfoWithOwner {
 					who: source.clone(),
 					pool_id: pool_id.clone(),
-					staking_info: StakingInfo { effective_time, amount },
+					staking_info: StakingInfo {
+						effective_time,
+						amount,
+						last_add_time: effective_time,
+					},
 				};
 				maybe_order.push_back(order);
 				// Make sure the first element has earlies effective time
@@ -577,18 +624,22 @@ pub mod pallet {
 		#[pallet::call_index(5)]
 		#[pallet::weight({1000})]
 		#[transactional]
-		pub fn claim_native(origin: OriginFor<T>) -> DispatchResult {
+		pub fn claim_native(origin: OriginFor<T>, until_time: BlockNumberFor<T>) -> DispatchResult {
 			let source = ensure_signed(origin)?;
-			Self::do_native_claim(source)
+			Self::do_native_claim(source, until_time)
 		}
 
 		// Claim stable token reward
 		#[pallet::call_index(6)]
 		#[pallet::weight({1000})]
 		#[transactional]
-		pub fn claim_stable(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
+		pub fn claim_stable(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			until_time: BlockNumberFor<T>,
+		) -> DispatchResult {
 			let source = ensure_signed(origin)?;
-			Self::do_stable_claim(source, pool_id)
+			Self::do_stable_claim(source, pool_id, until_time)
 		}
 
 		// Withdraw AIUSD along with reward if any
@@ -604,8 +655,8 @@ pub mod pallet {
 			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
 			ensure!(end_time < current_block, Error::<T>::PoolInvalidForFurtherAction);
 			// Claim reward
-			Self::do_native_claim(source.clone())?;
-			Self::do_stable_claim(source.clone(), pool_id.clone())?;
+			Self::do_native_claim(source.clone(), current_block.clone())?;
+			Self::do_stable_claim(source.clone(), pool_id.clone(), current_block)?;
 			// Withdraw and clean/modify all storage
 			Self::do_withdraw(source, pool_id)
 		}
@@ -626,6 +677,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		// return setting.epoch if time >= pool end_time
 		fn get_epoch_index(
 			pool_id: T::PoolId,
 			time: BlockNumberFor<T>,
@@ -638,24 +690,32 @@ pub mod pallet {
 				.checked_div(&setting.epoch_range)
 				.ok_or(ArithmeticError::Overflow)?;
 			let index: u128 = index_bn.try_into().or(Err(ArithmeticError::Overflow))?;
-			ensure!(index < setting.epoch, Error::<T>::EpochOverflow);
-			return Ok(index)
+			if (index >= setting.epoch) {
+				return Ok(setting.epoch);
+			} else {
+				return Ok(index);
+			}
 		}
 
+		// return pool ending time if epoch >= setting.epoch
 		fn get_epoch_begin_time(
 			pool_id: T::PoolId,
 			epoch: u128,
 		) -> Result<BlockNumberFor<T>, sp_runtime::DispatchError> {
 			let setting =
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
+			// If epoch larger than setting
+			if (epoch >= setting.epoch) {
+				return setting.end_time();
+			}
 			let epoch_bn: BlockNumberFor<T> =
 				epoch.try_into().or(Err(ArithmeticError::Overflow))?;
 			let result = setting
 				.start_time
 				.checked_add(
-					&setting.epoch_range.checked_mul(&epoch_bn).ok_or(Error::<T>::EpochOverflow)?,
+					&setting.epoch_range.checked_mul(&epoch_bn).ok_or(ArithmeticError::Overflow)?,
 				)
-				.ok_or(Error::<T>::EpochOverflow)?;
+				.ok_or(ArithmeticError::Overflow)?;
 			return Ok(result)
 		}
 
@@ -669,7 +729,8 @@ pub mod pallet {
 				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
+					*maybe_checkpoint =
+						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
 				}
 				Ok::<(), DispatchError>(())
 			})?;
@@ -677,7 +738,8 @@ pub mod pallet {
 				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
+					*maybe_checkpoint =
+						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
 				}
 				Ok::<(), DispatchError>(())
 			})?;
@@ -695,7 +757,8 @@ pub mod pallet {
 				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
+					*maybe_checkpoint =
+						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
 				}
 				Ok::<(), DispatchError>(())
 			})?;
@@ -703,26 +766,35 @@ pub mod pallet {
 				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
 				} else {
-					*maybe_checkpoint = Some(StakingInfo { effective_time, amount });
+					*maybe_checkpoint =
+						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
 				}
 				Ok::<(), DispatchError>(())
 			})?;
 			Ok(())
 		}
 
-		fn do_native_claim(who: T::AccountId) -> DispatchResult {
+		fn do_native_claim(who: T::AccountId, until_time: BlockNumberFor<T>) -> DispatchResult {
 			let beneficiary_account: T::AccountId = Self::native_token_beneficiary_account();
 			let current_block = frame_system::Pallet::<T>::block_number();
+			ensure!(until_time <= current_block, Error::<T>::CannotClaimFuture);
 			// NativeBalanceOf
 			let reward_pool = T::Fungible::balance(&beneficiary_account);
 
 			if let Some(mut ncp) = <NativeCheckpoint<T>>::get() {
 				if let Some(mut user_ncp) = <UserNativeCheckpoint<T>>::get(who.clone()) {
 					// get weight and update stake info
+					let user_claimed_weight =
+						user_ncp.claim(until_time).ok_or(ArithmeticError::Overflow)?;
 					let proportion = Perquintill::from_rational(
-						user_ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
-						ncp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
+						user_claimed_weight,
+						ncp.weight_force(until_time).ok_or(ArithmeticError::Overflow)?,
 					);
+					// Do not care what new synetic effective_time of staking pool
+					let _ = ncp
+						.claim_based_on_weight(user_claimed_weight)
+						.ok_or(ArithmeticError::Overflow)?;
+
 					let reward_pool_u128: u128 =
 						reward_pool.try_into().or(Err(ArithmeticError::Overflow))?;
 					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
@@ -739,7 +811,7 @@ pub mod pallet {
 					<UserNativeCheckpoint<T>>::insert(&who, user_ncp);
 					Self::deposit_event(Event::<T>::NativeRewardClaimed {
 						who,
-						time: current_block,
+						until_time,
 						amount: distributed_reward,
 					});
 				}
@@ -747,8 +819,13 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn do_stable_claim(who: T::AccountId, pool_id: T::PoolId) -> DispatchResult {
+		fn do_stable_claim(
+			who: T::AccountId,
+			pool_id: T::PoolId,
+			until_time: BlockNumberFor<T>,
+		) -> DispatchResult {
 			let current_block = frame_system::Pallet::<T>::block_number();
+			ensure!(until_time <= current_block, Error::<T>::CannotClaimFuture);
 			// BalanceOf
 			let reward_pool = <StableStakingPoolReward<T>>::get(pool_id.clone());
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
@@ -758,10 +835,17 @@ pub mod pallet {
 					<UserStableStakingPoolCheckpoint<T>>::get(who.clone(), pool_id.clone())
 				{
 					// get weight and update stake info
+					let user_claimed_weight =
+						user_scp.claim(until_time).ok_or(ArithmeticError::Overflow)?;
 					let proportion = Perquintill::from_rational(
-						user_scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
-						scp.claim(current_block).ok_or(ArithmeticError::Overflow)?,
+						user_claimed_weight,
+						scp.weight_force(until_time).ok_or(ArithmeticError::Overflow)?,
 					);
+					// Do not care what new synetic effective_time of staking pool
+					let _ = scp
+						.claim_based_on_weight(user_claimed_weight)
+						.ok_or(ArithmeticError::Overflow)?;
+
 					let reward_pool_u128: u128 =
 						reward_pool.try_into().or(Err(ArithmeticError::Overflow))?;
 					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
@@ -784,7 +868,7 @@ pub mod pallet {
 					Self::deposit_event(Event::<T>::StableRewardClaimed {
 						who,
 						pool_id,
-						time: current_block,
+						until_time,
 						amount: distributed_reward,
 					});
 				}
