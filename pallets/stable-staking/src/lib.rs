@@ -705,7 +705,7 @@ pub mod pallet {
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// If epoch larger than setting
 			if epoch >= setting.epoch {
-				return setting.end_time().ok_or(ArithmeticError::Overflow)?;
+				return Ok(setting.end_time().ok_or(ArithmeticError::Overflow)?);
 			}
 			let epoch_bn: BlockNumberFor<T> =
 				epoch.try_into().or(Err(ArithmeticError::Overflow))?;
