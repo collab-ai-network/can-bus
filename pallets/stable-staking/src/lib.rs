@@ -28,7 +28,7 @@ mod tests;
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
 pub struct StakingInfo<BlockNumber, Balance> {
 	// For a single position or
-	// Synetic overall average effective_time weighted by staked amount
+	// Synthetic overall average effective_time weighted by staked amount
 	effective_time: BlockNumber,
 	// Staked amount
 	amount: Balance,
@@ -40,7 +40,7 @@ pub struct StakingInfo<BlockNumber, Balance> {
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
 pub struct StakingInfoWithOwner<AccountId, PoolId, StakingInfo> {
 	// For a single position or
-	// Synetic overall average effective_time weighted by staked amount
+	// Synthetic overall average effective_time weighted by staked amount
 	who: AccountId,
 	// Staked amount
 	pool_id: PoolId,
@@ -60,7 +60,7 @@ where
 	Balance: AtLeast32BitUnsigned + Copy,
 	BlockNumber: AtLeast32BitUnsigned + Copy,
 {
-	// Mixing a new added staking position, replace the checkpoint with Synetic new one
+	// Mixing a new added staking position, replace the checkpoint with Synthetic new one
 	// Notice: The logic will be wrong if weight calculated time is before any single added
 	// effective_time
 	fn add(&mut self, effective_time: BlockNumber, amount: Balance) -> Option<()> {
@@ -94,7 +94,7 @@ where
 	}
 
 	// consume corresponding weight, change effective time without changing staked amount, return
-	// the changed effective time This function is mostly used for synetic checkpoint change
+	// the changed effective time This function is mostly used for Synthetic checkpoint change
 	fn claim_based_on_weight(&mut self, weight: u128) -> Option<BlockNumber> {
 		let oe: u128 = self.effective_time.try_into().ok()?;
 		let os: u128 = self.amount.try_into().ok()?;
@@ -790,7 +790,7 @@ pub mod pallet {
 						user_claimed_weight,
 						ncp.weight_force(until_time).ok_or(ArithmeticError::Overflow)?,
 					);
-					// Do not care what new synetic effective_time of staking pool
+					// Do not care what new Synthetic effective_time of staking pool
 					let _ = ncp
 						.claim_based_on_weight(user_claimed_weight)
 						.ok_or(ArithmeticError::Overflow)?;
@@ -841,7 +841,7 @@ pub mod pallet {
 						user_claimed_weight,
 						scp.weight_force(until_time).ok_or(ArithmeticError::Overflow)?,
 					);
-					// Do not care what new synetic effective_time of staking pool
+					// Do not care what new Synthetic effective_time of staking pool
 					let _ = scp
 						.claim_based_on_weight(user_claimed_weight)
 						.ok_or(ArithmeticError::Overflow)?;
