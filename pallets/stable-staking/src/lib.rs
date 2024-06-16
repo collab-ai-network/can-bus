@@ -96,7 +96,7 @@ where
 		let oe: u128 = self.effective_time.try_into().ok()?;
 		let os: u128 = self.amount.try_into().ok()?;
 
-		let delta_e: u128 = weight.checked_div(&os)?;
+		let delta_e: u128 = weight.checked_div(os)?;
 		let new_effective_time: BlockNumber = (oe + delta_e).try_into().ok()?;
 		self.effective_time = new_effective_time;
 
@@ -404,9 +404,11 @@ pub mod pallet {
 		PoolAlreadyStarted,
 		PoolAlreadyEnded,
 		PoolAlreadyExisted,
+		PoolNotEnded,
 		PoolNotExisted,
 		PoolNotStarted,
 		BadMetadata,
+		CannotClaimFuture,
 		EpochAlreadyEnded,
 		EpochNotExisted,
 		NoAssetId,
@@ -650,7 +652,7 @@ pub mod pallet {
 			// Pool closed
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
-			ensure!(end_time < current_block, Error::<T>::PoolInvalidForFurtherAction);
+			ensure!(end_time < current_block, Error::<T>::PoolNotEnded);
 			// Claim reward
 			Self::do_native_claim(source.clone(), current_block.clone())?;
 			Self::do_stable_claim(source.clone(), pool_id.clone(), current_block)?;
@@ -687,7 +689,7 @@ pub mod pallet {
 				.checked_div(&setting.epoch_range)
 				.ok_or(ArithmeticError::Overflow)?;
 			let index: u128 = index_bn.try_into().or(Err(ArithmeticError::Overflow))?;
-			if (index >= setting.epoch) {
+			if index >= setting.epoch {
 				return Ok(setting.epoch);
 			} else {
 				return Ok(index);
@@ -702,8 +704,8 @@ pub mod pallet {
 			let setting =
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// If epoch larger than setting
-			if (epoch >= setting.epoch) {
-				return setting.end_time();
+			if epoch >= setting.epoch {
+				return setting.end_time().ok_or(ArithmeticError::Overflow)?;
 			}
 			let epoch_bn: BlockNumberFor<T> =
 				epoch.try_into().or(Err(ArithmeticError::Overflow))?;
