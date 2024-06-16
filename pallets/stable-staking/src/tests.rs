@@ -53,13 +53,11 @@ fn update_reward_successful_and_failed() {
 	new_test_ext().execute_with(|| {
 		// update epoch 0 reward with amount of 2000
 		assert_ok!(StableStaking::update_reward(RuntimeOrigin::root(), 1u128, 0u128, 2000u64));
-		assert_events(vec![
-			RuntimeEvent::StableStaking(Event::RewardUpdated {
-				pool_id: 1u128,
-				epoch: 0u128,
-				amount: 2000u64,
-			}),
-		]);
+		assert_events(vec![RuntimeEvent::StableStaking(Event::RewardUpdated {
+			pool_id: 1u128,
+			epoch: 0u128,
+			amount: 2000u64,
+		})]);
 		// Staking pool reward storage efffective
 		assert_eq!(StableStaking::stable_staking_pool_reward(1u128), 2000u64);
 		assert_eq!(StableStaking::stable_staking_pool_epoch_reward(1u128, 0u128), Some(2000u64));
@@ -98,13 +96,11 @@ fn update_reward_successful_and_failed() {
 		// Pool epoch = 10
 		System::set_block_number(9999999u64);
 		assert_ok!(StableStaking::update_reward(RuntimeOrigin::root(), 1u128, 10u128, 2000u64));
-		assert_events(vec![
-			RuntimeEvent::StableStaking(Event::RewardUpdated {
-				pool_id: 1u128,
-				epoch: 10u128,
-				amount: 2000u64,
-			}),
-		]);
+		assert_events(vec![RuntimeEvent::StableStaking(Event::RewardUpdated {
+			pool_id: 1u128,
+			epoch: 10u128,
+			amount: 2000u64,
+		})]);
 
 		// Can not update reward if no AIUSD registed
 		System::set_block_number(301u64);
@@ -119,7 +115,6 @@ fn update_reward_successful_and_failed() {
 #[test]
 fn stake_successful_and_failed() {
 	new_test_ext().execute_with(|| {
-
 		// Can not stake non-exist pool
 		assert_noop!(
 			StableStaking::stake(RuntimeOrigin::signed(USER_A), 2u128, 2000u64),
@@ -139,40 +134,78 @@ fn stake_successful_and_failed() {
 			Error::<Test>::PoolAlreadyEnded
 		);
 
-
 		// Success, check user/global native checkpoint storage
 		// check pending set up storage
 		System::set_block_number(301u64);
 		assert_ok!(StableStaking::stake(RuntimeOrigin::signed(USER_A), 1u128, 2000u64));
 		let global_staking_info = StableStaking::native_checkpoint().unwrap();
-		assert_eq!(global_staking_info, StakingInfo { effective_time: 301, amount: 2000u64, last_add_time: 301});
+		assert_eq!(
+			global_staking_info,
+			StakingInfo { effective_time: 301, amount: 2000u64, last_add_time: 301 }
+		);
 		let user_a_staking_info = StableStaking::user_native_checkpoint(USER_A).unwrap();
-		assert_eq!(user_a_staking_info, StakingInfo { effective_time: 301, amount: 2000u64, last_add_time: 301});
+		assert_eq!(
+			user_a_staking_info,
+			StakingInfo { effective_time: 301, amount: 2000u64, last_add_time: 301 }
+		);
 		let pending_set_up = StableStaking::pending_setup();
 		assert_eq(pending_set_up.len(), 1);
 		let pending_set_up_element = pending_set_up.get(0).unwrap();
 		// Pool set up time = 200
-		// So user enter at 301 need to wait till 600 to make it effective and receiving Stable staking reward
-		assert_eq!(pending_set_up_element, StakingInfoWithOwner { who: USER_A, pool_id: 1u128, staking_info: StakingInfo { effective_time: 600, amount: 2000u64, last_add_time: 600}});
+		// So user enter at 301 need to wait till 600 to make it effective and receiving Stable
+		// staking reward
+		assert_eq!(
+			pending_set_up_element,
+			StakingInfoWithOwner {
+				who: USER_A,
+				pool_id: 1u128,
+				staking_info: StakingInfo {
+					effective_time: 600,
+					amount: 2000u64,
+					last_add_time: 600
+				}
+			}
+		);
 
 		// Second user B stake
 		fast_forward_to(311u64);
 		assert_ok!(StableStaking::stake(RuntimeOrigin::signed(USER_B), 1u128, 1000u64));
 		let global_staking_info = StableStaking::native_checkpoint().unwrap();
 		// Synthetic (301, 2000), (311, 1000) = (304.3333, 3000)
-		assert_eq!(global_staking_info, StakingInfo { effective_time: 304, amount: 3000u64, last_add_time: 311});
+		assert_eq!(
+			global_staking_info,
+			StakingInfo { effective_time: 304, amount: 3000u64, last_add_time: 311 }
+		);
 		// user a unchanged
 		let user_a_staking_info = StableStaking::user_native_checkpoint(USER_A).unwrap();
-		assert_eq!(user_a_staking_info, StakingInfo { effective_time: 301, amount: 2000u64, last_add_time: 301});
+		assert_eq!(
+			user_a_staking_info,
+			StakingInfo { effective_time: 301, amount: 2000u64, last_add_time: 301 }
+		);
 		// user b
 		let user_b_staking_info = StableStaking::user_native_checkpoint(USER_B).unwrap();
-		assert_eq!(user_b_staking_info, StakingInfo { effective_time: 311, amount: 1000u64, last_add_time: 311});
+		assert_eq!(
+			user_b_staking_info,
+			StakingInfo { effective_time: 311, amount: 1000u64, last_add_time: 311 }
+		);
 		// Pending set up storage change
 		let pending_set_up = StableStaking::pending_setup();
 		assert_eq(pending_set_up.len(), 2);
 		// Pool set up time = 200
-		// So user enter at 311 need to wait till 600 to make it effective and receiving Stable staking reward
-		assert_eq!(pending_set_up_element, StakingInfoWithOwner { who: USER_B, pool_id: 1u128, staking_info: StakingInfo { effective_time: 600, amount: 1000u64, last_add_time: 600}});
+		// So user enter at 311 need to wait till 600 to make it effective and receiving Stable
+		// staking reward
+		assert_eq!(
+			pending_set_up_element,
+			StakingInfoWithOwner {
+				who: USER_B,
+				pool_id: 1u128,
+				staking_info: StakingInfo {
+					effective_time: 600,
+					amount: 1000u64,
+					last_add_time: 600
+				}
+			}
+		);
 
 		// Can not stake if no AIUSD registed
 		<AIUSDAssetId<Test>>::kill();
