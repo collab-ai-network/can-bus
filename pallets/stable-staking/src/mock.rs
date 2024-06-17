@@ -26,6 +26,8 @@ use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	BuildStorage,
 };
+
+type AccountId = u64;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 type Balance = u64;
@@ -53,14 +55,14 @@ impl frame_system::Config for Test {
 	type Nonce = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Block = Block;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -120,7 +122,7 @@ parameter_types! {
 
 impl pallet_stable_staking::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type StakingPoolCommitteeOrigin = EnsureRoot<u64>;
+	type StakingPoolCommitteeOrigin = EnsureRoot<AccountId>;
 	type PoolId = PoolId;
 	type Fungibles = Assets;
 	type Fungible = Balances;
@@ -130,9 +132,9 @@ impl pallet_stable_staking::Config for Test {
 }
 
 pub const ENDOWED_BALANCE: u64 = 100_000_000;
-pub const USER_A: u64 = 0x2;
-pub const USER_B: u64 = 0x3;
-pub const USER_C: u64 = 0x4;
+pub const USER_A: AccountId = 0x2;
+pub const USER_B: AccountId = 0x3;
+pub const USER_C: AccountId = 0x4;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let native_token_pool = HavlingMintId::get().into_account_truncating();

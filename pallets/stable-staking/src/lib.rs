@@ -535,8 +535,8 @@ pub mod pallet {
 				},
 			)?;
 
-			<StableStakingPoolReward<T>>::try_mutate(&pool_id, |maybe_reward| -> DispatchResult {
-				*maybe_reward = *maybe_reward + actual_reward;
+			<StableStakingPoolReward<T>>::try_mutate(&pool_id, |reward| -> DispatchResult {
+				*reward = reward.checked_add(&actual_reward).ok_or(ArithmeticError::Overflow)?;
 				Ok(())
 			})?;
 			Ok(())
