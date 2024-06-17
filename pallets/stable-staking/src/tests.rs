@@ -38,7 +38,7 @@ fn can_not_create_pool_already_started_or_existed() {
 		// Transfer and check result
 		fast_forward_to(101);
 		assert_noop!(
-			StableStaking::create_staking_pool(RuntimeOrigin::root(), 2u128, pool_setup),
+			StableStaking::create_staking_pool(RuntimeOrigin::root(), 2u128, pool_setup.clone()),
 			Error::<Test>::PoolAlreadyStarted
 		);
 		// Create another pool is fine
@@ -176,7 +176,7 @@ fn stake_successful_and_failed() {
 		// So user enter at 301 need to wait till 600 to make it effective and receiving Stable
 		// staking reward
 		assert_eq!(
-			pending_set_up_element,
+			*pending_set_up_element,
 			StakingInfoWithOwner {
 				who: USER_A,
 				pool_id: 1u128,
@@ -223,7 +223,7 @@ fn stake_successful_and_failed() {
 		// So user enter at 311 need to wait till 600 to make it effective and receiving Stable
 		// staking reward
 		assert_eq!(
-			pending_set_up_element,
+			*pending_set_up_element,
 			StakingInfoWithOwner {
 				who: USER_B,
 				pool_id: 1u128,
@@ -271,7 +271,8 @@ fn solve_pending_stake_and_hook_works() {
 			global_staking_info,
 			StakingInfo { effective_time: 600, amount: 2000u64, last_add_time: 600 }
 		);
-		let user_a_staking_info = UserStableStakingPoolCheckpoint(USER_A, 1u128).unwrap();
+		let user_a_staking_info =
+			StableStaking::user_stable_staking_pool_checkpoint(USER_A, 1u128).unwrap();
 		assert_eq!(
 			user_a_staking_info,
 			StakingInfo { effective_time: 600, amount: 2000u64, last_add_time: 600 }
@@ -297,7 +298,7 @@ fn solve_pending_stake_and_hook_works() {
 			StakingInfo { effective_time: 600, amount: 2000u64, last_add_time: 600 }
 		);
 		// User b staking is still none
-		assert!(UserStableStakingPoolCheckpoint(USER_B, 1u128).is_none);
+		assert!(StableStaking::user_stable_staking_pool_checkpoint(USER_B, 1u128).is_none);
 
 		// Any one can trigger manual
 		assert_ok!(StableStaking::solve_pending_stake(RuntimeOrigin::signed(USER_C)));
@@ -311,7 +312,8 @@ fn solve_pending_stake_and_hook_works() {
 		// Pending solved
 		assert_eq!(pending_set_up.len(), 0);
 		// User B stable staking checkpoint updated
-		let user_b_staking_info = UserStableStakingPoolCheckpoint(USER_B, 1u128).unwrap();
+		let user_b_staking_info =
+			StableStaking::user_stable_staking_pool_checkpoint(USER_B, 1u128).unwrap();
 		// The effective time is delayed accordingly
 		assert_eq!(
 			user_b_staking_info,
@@ -344,7 +346,10 @@ fn claim_native_successful_and_failed() {
 
 		// Just for convenience, suppose there are already 100 times ENDOWED_BALANCE  native token
 		// reward
-		assert_ok!(Balances::set_balance(&native_token_pool, 100 * ENDOWED_BALANCE));
+		assert_eq!(
+			Balances::set_balance(&native_token_pool, 100 * ENDOWED_BALANCE),
+			100 * ENDOWED_BALANCE
+		);
 
 		System::set_block_number(601u64);
 		// User_a try claim before 401, failed since it is not allowed to claim before last_add_time
@@ -360,7 +365,7 @@ fn claim_native_successful_and_failed() {
 		// claim weight = 4000 * (501 - 351) = 600,000
 		// reward = 100 * ENDOWED_BALANCE * claim weight / total weight
 		assert_events(vec![
-			RuntimeEvent::Balances(Event::Transfer {
+			RuntimeEvent::Balances(pallet_balances::Event::Transfer {
 				from: native_token_pool,
 				to: USER_A,
 				amount: 8_571_428_571,
