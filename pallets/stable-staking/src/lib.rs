@@ -341,6 +341,12 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	// The amount of assets in pending proccess based on Pool id
+	#[pallet::storage]
+	#[pallet::getter(fn pending_amount)]
+	pub type PendingAmount<T: Config> =
+		StorageMap<_, Twox64Concat, T::PoolId, BalanceOf<T>, ValueQuery>;
+
 	// Asset id of AIUSD
 	#[pallet::storage]
 	#[pallet::getter(fn aiusd_asset_id)]
@@ -565,13 +571,22 @@ pub mod pallet {
 			ensure!(setting.start_time < current_block, Error::<T>::PoolNotStarted);
 
 			// Pool Maximum Cap check
+			let pending_amount = <PendingAmount<T>>::get(pool_id.clone());
 			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id.clone()) {
-				let available_pool_cap =
-					setting.pool_cap.checked_sub(&scp.amount).ok_or(ArithmeticError::Underflow)?;
+				let available_pool_cap = setting
+					.pool_cap
+					.checked_sub(&scp.amount)
+					.ok_or(ArithmeticError::Underflow)?
+					.checked_sub(&pending_amount)
+					.ok_or(ArithmeticError::Underflow)?;
 				ensure!(available_pool_cap >= amount, Error::<T>::PoolCapLimit);
 			} else {
 				// No existing staked amount
-				ensure!(setting.pool_cap >= amount, Error::<T>::PoolCapLimit);
+				let available_pool_cap = setting
+					.pool_cap
+					.checked_sub(&pending_amount)
+					.ok_or(ArithmeticError::Underflow)?;
+				ensure!(available_pool_cap >= amount, Error::<T>::PoolCapLimit);
 			}
 
 			// Try get the beginning block of latest incoming valid epoch for pending staking
@@ -603,6 +618,11 @@ pub mod pallet {
 					a.staking_info.effective_time.cmp(&b.staking_info.effective_time)
 				});
 			});
+			// Update pending amount
+			<PendingAmount<T>>::insert(
+				pool_id.clone(),
+				pending_amount.checked_add(&amount).ok_or(ArithmeticError::Overflow)?,
+			);
 			// Native staking effect immediately
 			Self::do_native_add(source.clone(), amount, current_block)?;
 			let asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
@@ -977,10 +997,18 @@ pub mod pallet {
 						)?;
 						Self::deposit_event(Event::<T>::PendingStakingSolved {
 							who: x.who,
-							pool_id: x.pool_id,
+							pool_id: x.pool_id.clone(),
 							effective_time: n,
 							amount: x.staking_info.amount,
 						});
+						// Update pending amount
+						let pending_amount = <PendingAmount<T>>::get(x.pool_id.clone());
+						<PendingAmount<T>>::insert(
+							x.pool_id,
+							pending_amount
+								.checked_sub(&x.staking_info.amount)
+								.ok_or(ArithmeticError::Underflow)?,
+						);
 					},
 					// Latest Pending tx not effective
 					Some(x) => {

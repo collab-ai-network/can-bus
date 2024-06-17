@@ -278,7 +278,7 @@ fn stake_successful_and_failed() {
 		assert_ok!(StableStaking::stake(
 			RuntimeOrigin::signed(USER_A),
 			1u128,
-			50_000_001u64 - 2000u64 - 1000u64
+			50_000_000u64 - 2000u64 - 1000u64
 		));
 	})
 }
@@ -404,6 +404,7 @@ fn claim_native_successful_and_failed() {
 		// total weight = 5000 * (501 - 361) = 700,000
 		// claim weight = 4000 * (501 - 351) = 600,000
 		// reward = 100 * ENDOWED_BALANCE * claim weight / total weight
+		// 8571428571.428
 		assert_events(vec![
 			RuntimeEvent::Balances(pallet_balances::Event::Transfer {
 				from: native_token_pool,
@@ -466,8 +467,9 @@ fn claim_stable_successful_and_failed() {
 		//     	 epoch_range: 100u64,
 		//       setup_time: 200u64,
 		// 610 => current epoch 5
+		let stable_token_pool_balance = Assets::balance(1u32, stable_token_pool);
 		assert_ok!(StableStaking::update_reward(RuntimeOrigin::root(), 1u128, 5u128, 2000u64));
-		assert_eq!(Assets::balance(1u32, stable_token_pool), 2000u64);
+		assert_eq!(Assets::balance(1u32, stable_token_pool), stable_token_pool_balance + 2000u64);
 
 		// Only user a yet, claiming from 600 to 650
 		// Stable staking
@@ -476,7 +478,7 @@ fn claim_stable_successful_and_failed() {
 		// claimed weight: 100% out of total!
 		System::set_block_number(699u64);
 		assert_ok!(StableStaking::claim_stable(RuntimeOrigin::signed(USER_A), 1u128, 650u64));
-		assert_eq!(Assets::balance(1u32, stable_token_pool), 0u64);
+		assert_eq!(Assets::balance(1u32, stable_token_pool), stable_token_pool_balance);
 		assert_events(vec![
 			RuntimeEvent::Assets(pallet_assets::Event::Transferred {
 				asset_id: 1u32,
@@ -487,8 +489,8 @@ fn claim_stable_successful_and_failed() {
 			RuntimeEvent::StableStaking(Event::StableRewardClaimed {
 				who: USER_A,
 				pool_id: 1u128,
-				until_time: 501u64,
-				reward_amount: 8_571_428_571u64,
+				until_time: 650u64,
+				reward_amount: 2000u64,
 			}),
 		]);
 		// Check stable staking checkpoint storage
@@ -509,7 +511,7 @@ fn claim_stable_successful_and_failed() {
 		fast_forward_to(710u64);
 		// 710 => current epoch 6
 		assert_ok!(StableStaking::update_reward(RuntimeOrigin::root(), 1u128, 6u128, 4000u64));
-		assert_eq!(Assets::balance(1u32, stable_token_pool), 4000u64);
+		assert_eq!(Assets::balance(1u32, stable_token_pool), stable_token_pool_balance + 4000u64);
 		System::set_block_number(799u64);
 		// Stable staking
 		// User_A : (650, 2000) + (700, 2000) = (675, 4000) with last_add_time = 700
@@ -525,13 +527,13 @@ fn claim_stable_successful_and_failed() {
 				asset_id: 1u32,
 				from: stable_token_pool,
 				to: USER_A,
-				amount: 3428u64,
+				amount: 3429u64,
 			}),
 			RuntimeEvent::StableStaking(Event::StableRewardClaimed {
 				who: USER_A,
 				pool_id: 1u128,
 				until_time: 750u64,
-				reward_amount: 3428u64,
+				reward_amount: 3429u64,
 			}),
 		]);
 
