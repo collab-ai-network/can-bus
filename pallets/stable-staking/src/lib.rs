@@ -419,14 +419,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		/// Weight: see `begin_block`
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-			if let Some(latest_pending_setup) = <PendingSetup<T>>::get().get(0) {
-				// Only trigger if latest pending is effective
-				if latest_pending_setup.staking_info.effective_time <= n {
-					// Even if we fail to solve_pending, we can not allow error out
-					let _ = Self::solve_pending(n);
-				}
-			}
-			Weight::zero()
+			Self::begin_block(n)
 		}
 	}
 
@@ -958,6 +951,17 @@ pub mod pallet {
 			}
 			<PendingSetup<T>>::put(pending_setup);
 			Ok(())
+		}
+
+		fn begin_block(now: BlockNumberFor<T>) -> Weight {
+			if let Some(latest_pending_setup) = <PendingSetup<T>>::get().get(0) {
+				// Only trigger if latest pending is effective
+				if latest_pending_setup.staking_info.effective_time <= n {
+					// Even if we fail to solve_pending, we can not allow error out
+					let _ = Self::solve_pending(n);
+				}
+			}
+			Weight::zero()
 		}
 
 		pub fn native_token_beneficiary_account() -> T::AccountId {

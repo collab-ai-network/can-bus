@@ -17,10 +17,11 @@
 use crate::{self as pallet_stable_staking};
 use frame_support::{
 	assert_ok, derive_impl, ord_parameter_types, parameter_types,
-	traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, SortedMembers},
+	traits::{AsEnsureOriginWithArg, ConstU32, ConstU64},
 	PalletId,
 };
-use hex_literal::hex;
+use frame_system::EnsureRoot;
+use pallet_stable_staking::PoolSetting;
 use sp_core::{ConstU16, H256};
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
@@ -137,7 +138,7 @@ pub const USER_B: AccountId = 0x3;
 pub const USER_C: AccountId = 0x4;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let native_token_pool = HavlingMintId::get().into_account_truncating();
+	let native_token_pool: u64 = HavlingMintId::get().into_account_truncating();
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	pallet_balances::GenesisConfig::<Test> {
 		balances: vec![
