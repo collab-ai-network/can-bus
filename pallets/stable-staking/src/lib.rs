@@ -379,13 +379,13 @@ pub mod pallet {
 		NativeRewardClaimed {
 			who: T::AccountId,
 			until_time: BlockNumberFor<T>,
-			amount: NativeBalanceOf<T>,
+			reward_amount: NativeBalanceOf<T>,
 		},
 		StableRewardClaimed {
 			who: T::AccountId,
 			pool_id: T::PoolId,
 			until_time: BlockNumberFor<T>,
-			amount: BalanceOf<T>,
+			reward_amount: BalanceOf<T>,
 		},
 		Withdraw {
 			who: T::AccountId,
@@ -804,7 +804,7 @@ pub mod pallet {
 					Self::deposit_event(Event::<T>::NativeRewardClaimed {
 						who,
 						until_time,
-						amount: distributed_reward,
+						reward_amount: distributed_reward,
 					});
 				}
 			}
@@ -861,7 +861,7 @@ pub mod pallet {
 						who,
 						pool_id,
 						until_time,
-						amount: distributed_reward,
+						reward_amount: distributed_reward,
 					});
 				}
 			}
