@@ -411,6 +411,7 @@ pub mod pallet {
 		PoolAlreadyStarted,
 		PoolAlreadyEnded,
 		PoolAlreadyExisted,
+		PoolCapLimit,
 		PoolNotEnded,
 		PoolNotExisted,
 		PoolNotStarted,
@@ -559,6 +560,16 @@ pub mod pallet {
 			let end_time =
 				setting.end_time().ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 			ensure!(setting.start_time < current_block, Error::<T>::PoolNotStarted);
+
+			// Pool Maximum Cap check
+			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id.clone()) {
+				let available_pool_cap =
+					setting.pool_cap.checked_sub(scp.amount).ok_or(ArithmeticError::Underflow)?;
+				ensure!(available_pool_cap >= amount, Error::<T>::PoolCapLimit);
+			} else {
+				// No existing staked amount
+				ensure!(setting.pool_cap >= amount, Error::<T>::PoolCapLimit);
+			}
 
 			// Try get the beginning block of latest incoming valid epoch for pending staking
 			let effective_epoch = Self::get_epoch_index(

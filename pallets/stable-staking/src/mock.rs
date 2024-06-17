@@ -169,7 +169,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			epoch: 10u128,
 			epoch_range: 100u64,
 			setup_time: 200u64,
-			pool_cap: 1_000_000_000u64,
+			pool_cap: 50_000_000u64,
 		};
 		assert_ok!(StableStaking::create_staking_pool(RuntimeOrigin::root(), 1u128, pool_setup));
 	});
