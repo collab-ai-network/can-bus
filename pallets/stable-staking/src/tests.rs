@@ -175,6 +175,7 @@ fn stake_successful_and_failed() {
 		// Second user B stake
 		fast_forward_to(311u64);
 		assert_ok!(StableStaking::stake(RuntimeOrigin::signed(USER_B), 1u128, 1000u64));
+		assert_eq!(Assets::balance(1u32, native_token_pool), ENDOWED_BALANCE + 2000u64 + 1000u64);
 		let global_staking_info = StableStaking::native_checkpoint().unwrap();
 		// Synthetic (301, 2000), (311, 1000) = (304.3333, 3000)
 		assert_eq!(

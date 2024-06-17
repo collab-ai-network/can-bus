@@ -953,7 +953,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn begin_block(now: BlockNumberFor<T>) -> Weight {
+		pub(crate) fn begin_block(n: BlockNumberFor<T>) -> Weight {
 			if let Some(latest_pending_setup) = <PendingSetup<T>>::get().get(0) {
 				// Only trigger if latest pending is effective
 				if latest_pending_setup.staking_info.effective_time <= n {
