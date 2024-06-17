@@ -567,7 +567,7 @@ pub mod pallet {
 			// Pool Maximum Cap check
 			if let Some(scp) = <StableStakingPoolCheckpoint<T>>::get(pool_id.clone()) {
 				let available_pool_cap =
-					setting.pool_cap.checked_sub(scp.amount).ok_or(ArithmeticError::Underflow)?;
+					setting.pool_cap.checked_sub(&scp.amount).ok_or(ArithmeticError::Underflow)?;
 				ensure!(available_pool_cap >= amount, Error::<T>::PoolCapLimit);
 			} else {
 				// No existing staked amount
