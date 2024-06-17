@@ -298,7 +298,7 @@ fn solve_pending_stake_and_hook_works() {
 			StakingInfo { effective_time: 600, amount: 2000u64, last_add_time: 600 }
 		);
 		// User b staking is still none
-		assert!(StableStaking::user_stable_staking_pool_checkpoint(USER_B, 1u128).is_none);
+		assert!(StableStaking::user_stable_staking_pool_checkpoint(USER_B, 1u128).is_none());
 
 		// Any one can trigger manual
 		assert_ok!(StableStaking::solve_pending_stake(RuntimeOrigin::signed(USER_C)));

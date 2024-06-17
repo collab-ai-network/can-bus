@@ -161,7 +161,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		assert_ok!(StableStaking::regist_aiusd(RuntimeOrigin::root(), 1u32));
 		assert_eq!(StableStaking::aiusd_asset_id(), Some(1u32));
 		// Create stable staking pool
-		let pool_setup: PoolSetting = PoolSetting::<u64, u64> {
+		let pool_setup: PoolSetting<u64, u64> = PoolSetting {
 			start_time: 100u64,
 			epoch: 10u128,
 			epoch_range: 100u64,
