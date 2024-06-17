@@ -157,6 +157,9 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		// Regist AIUSD
 		// asset_id = 1, admin = USER_A
 		assert_ok!(Assets::create(RuntimeOrigin::signed(USER_A), 1u32, USER_A, 1));
+		assert_ok!(Assets::mint(RuntimeOrigin::signed(USER_A), 1u32, USER_A, ENDOWED_BALANCE));
+		assert_ok!(Assets::mint(RuntimeOrigin::signed(USER_A), 1u32, USER_B, ENDOWED_BALANCE));
+		assert_ok!(Assets::mint(RuntimeOrigin::signed(USER_A), 1u32, USER_C, ENDOWED_BALANCE));
 		// Setup stable staking pallet
 		assert_ok!(StableStaking::regist_aiusd(RuntimeOrigin::root(), 1u32));
 		assert_eq!(StableStaking::aiusd_asset_id(), Some(1u32));

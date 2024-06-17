@@ -60,6 +60,7 @@ where
 	// Mixing a new added staking position, replace the checkpoint with Synthetic new one
 	// Notice: The logic will be wrong if weight calculated time is before any single added
 	// effective_time
+	// None means TypeIncompatible Or Overflow Or Division Zero
 	fn add(&mut self, effective_time: BlockNumber, amount: Balance) -> Option<()> {
 		// If last_add_time always > effective_time, only new added effective time can effect
 		// last_add_time
@@ -82,6 +83,7 @@ where
 	}
 
 	// Claim/Update stake info and return the consumed weight
+	// None means TypeIncompatible Or Overflow
 	fn claim(&mut self, n: BlockNumber) -> Option<u128> {
 		// Claim time before last_add_time is not allowed, since weight can not be calculated
 		let weight = self.weight(n)?;
@@ -92,6 +94,7 @@ where
 
 	// consume corresponding weight, change effective time without changing staked amount, return
 	// the changed effective time This function is mostly used for Synthetic checkpoint change
+	// None means TypeIncompatible Or Division Zero
 	fn claim_based_on_weight(&mut self, weight: u128) -> Option<BlockNumber> {
 		let oe: u128 = self.effective_time.try_into().ok()?;
 		let os: u128 = self.amount.try_into().ok()?;
@@ -104,6 +107,7 @@ where
 	}
 
 	// Withdraw staking amount and return the amount after withdrawal
+	// None means underflow
 	fn withdraw(&mut self, v: Balance) -> Option<Balance> {
 		self.amount = self.amount.checked_sub(&v)?;
 
@@ -112,6 +116,7 @@ where
 
 	// You should never use n < any single effective_time
 	// it only works for n > all effective_time
+	// None means TypeIncompatible Or Overflow
 	fn weight(&self, n: BlockNumber) -> Option<u128> {
 		// Estimate weight before last_add_time can be biased so not allowed
 		if self.last_add_time > n {
@@ -124,6 +129,7 @@ where
 	}
 
 	// Force estimate weight regardless
+	// None means TypeIncompatible Or Overflow
 	fn weight_force(&self, n: BlockNumber) -> Option<u128> {
 		let e: u128 = n.checked_sub(&self.effective_time)?.try_into().ok()?;
 		let s: u128 = self.amount.try_into().ok()?;
@@ -151,6 +157,7 @@ where
 	Balance: AtLeast32BitUnsigned + Copy,
 	BlockNumber: AtLeast32BitUnsigned + Copy,
 {
+	// None means TypeIncompatible Or Overflow
 	fn end_time(&self) -> Option<BlockNumber> {
 		let er: u128 = self.epoch_range.try_into().ok()?;
 		let st: u128 = self.start_time.try_into().ok()?;
@@ -412,7 +419,7 @@ pub mod pallet {
 		EpochAlreadyEnded,
 		EpochNotExisted,
 		NoAssetId,
-		TypeIncompatible,
+		TypeIncompatibleOrArithmeticError,
 	}
 
 	#[pallet::hooks]
@@ -549,7 +556,8 @@ pub mod pallet {
 			let setting =
 				<StakingPoolSetting<T>>::get(pool_id.clone()).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool started and not closed soon
-			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
+			let end_time =
+				setting.end_time().ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 			ensure!(setting.start_time < current_block, Error::<T>::PoolNotStarted);
 
 			// Try get the beginning block of latest incoming valid epoch for pending staking
@@ -644,7 +652,8 @@ pub mod pallet {
 				<StakingPoolSetting<T>>::get(pool_id.clone()).ok_or(Error::<T>::PoolNotExisted)?;
 			// Pool closed
 			let current_block = frame_system::Pallet::<T>::block_number();
-			let end_time = setting.end_time().ok_or(ArithmeticError::Overflow)?;
+			let end_time =
+				setting.end_time().ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 			ensure!(end_time < current_block, Error::<T>::PoolNotEnded);
 			// Claim reward
 			Self::do_native_claim(source.clone(), current_block)?;
@@ -680,8 +689,9 @@ pub mod pallet {
 			let index_bn = time
 				.saturating_sub(setting.start_time)
 				.checked_div(&setting.epoch_range)
-				.ok_or(ArithmeticError::Overflow)?;
-			let index: u128 = index_bn.try_into().or(Err(ArithmeticError::Overflow))?;
+				.ok_or(ArithmeticError::DivisionByZero)?;
+			let index: u128 =
+				index_bn.try_into().or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 			if index >= setting.epoch {
 				return Ok(setting.epoch);
 			} else {
@@ -698,10 +708,12 @@ pub mod pallet {
 				<StakingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			// If epoch larger than setting
 			if epoch >= setting.epoch {
-				return Ok(setting.end_time().ok_or(ArithmeticError::Overflow)?);
+				return Ok(setting
+					.end_time()
+					.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?);
 			}
 			let epoch_bn: BlockNumberFor<T> =
-				epoch.try_into().or(Err(ArithmeticError::Overflow))?;
+				epoch.try_into().or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 			let result = setting
 				.start_time
 				.checked_add(
@@ -719,7 +731,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			<NativeCheckpoint<T>>::try_mutate(|maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
-					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
+					checkpoint
+						.add(effective_time, amount)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 				} else {
 					*maybe_checkpoint =
 						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
@@ -728,7 +742,9 @@ pub mod pallet {
 			})?;
 			<UserNativeCheckpoint<T>>::try_mutate(&who, |maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
-					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
+					checkpoint
+						.add(effective_time, amount)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 				} else {
 					*maybe_checkpoint =
 						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
@@ -747,7 +763,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			<StableStakingPoolCheckpoint<T>>::try_mutate(&pool_id, |maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
-					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
+					checkpoint
+						.add(effective_time, amount)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 				} else {
 					*maybe_checkpoint =
 						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
@@ -756,7 +774,9 @@ pub mod pallet {
 			})?;
 			<UserStableStakingPoolCheckpoint<T>>::try_mutate(&who, &pool_id, |maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
-					checkpoint.add(effective_time, amount).ok_or(ArithmeticError::Overflow)?;
+					checkpoint
+						.add(effective_time, amount)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 				} else {
 					*maybe_checkpoint =
 						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
@@ -776,22 +796,26 @@ pub mod pallet {
 			if let Some(mut ncp) = <NativeCheckpoint<T>>::get() {
 				if let Some(mut user_ncp) = <UserNativeCheckpoint<T>>::get(who.clone()) {
 					// get weight and update stake info
-					let user_claimed_weight =
-						user_ncp.claim(until_time).ok_or(ArithmeticError::Overflow)?;
+					let user_claimed_weight = user_ncp
+						.claim(until_time)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 					let proportion = Perquintill::from_rational(
 						user_claimed_weight,
-						ncp.weight_force(until_time).ok_or(ArithmeticError::Overflow)?,
+						ncp.weight_force(until_time)
+							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
 					);
 					// Do not care what new Synthetic effective_time of staking pool
 					let _ = ncp
 						.claim_based_on_weight(user_claimed_weight)
-						.ok_or(ArithmeticError::Overflow)?;
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 
-					let reward_pool_u128: u128 =
-						reward_pool.try_into().or(Err(ArithmeticError::Overflow))?;
+					let reward_pool_u128: u128 = reward_pool
+						.try_into()
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
-					let distributed_reward: NativeBalanceOf<T> =
-						distributed_reward_u128.try_into().or(Err(ArithmeticError::Overflow))?;
+					let distributed_reward: NativeBalanceOf<T> = distributed_reward_u128
+						.try_into()
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					T::Fungible::transfer(
 						&beneficiary_account,
 						&who,
@@ -827,22 +851,26 @@ pub mod pallet {
 					<UserStableStakingPoolCheckpoint<T>>::get(who.clone(), pool_id.clone())
 				{
 					// get weight and update stake info
-					let user_claimed_weight =
-						user_scp.claim(until_time).ok_or(ArithmeticError::Overflow)?;
+					let user_claimed_weight = user_scp
+						.claim(until_time)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 					let proportion = Perquintill::from_rational(
 						user_claimed_weight,
-						scp.weight_force(until_time).ok_or(ArithmeticError::Overflow)?,
+						scp.weight_force(until_time)
+							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
 					);
 					// Do not care what new Synthetic effective_time of staking pool
 					let _ = scp
 						.claim_based_on_weight(user_claimed_weight)
-						.ok_or(ArithmeticError::Overflow)?;
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 
-					let reward_pool_u128: u128 =
-						reward_pool.try_into().or(Err(ArithmeticError::Overflow))?;
+					let reward_pool_u128: u128 = reward_pool
+						.try_into()
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
-					let distributed_reward: BalanceOf<T> =
-						distributed_reward_u128.try_into().or(Err(ArithmeticError::Overflow))?;
+					let distributed_reward: BalanceOf<T> = distributed_reward_u128
+						.try_into()
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					T::Fungibles::transfer(
 						asset_id,
 						&Self::stable_token_beneficiary_account(),
@@ -884,14 +912,16 @@ pub mod pallet {
 						Preservation::Expendable,
 					)?;
 					// Correct global stable staking pool
-					scp.withdraw(user_scp.amount).ok_or(ArithmeticError::Overflow)?;
+					scp.withdraw(user_scp.amount).ok_or(ArithmeticError::Underflow)?;
 					<StableStakingPoolCheckpoint<T>>::insert(&pool_id, scp);
 					// Correct global native staking pool
 					// stable token balance type
-					let user_scp_amount_sb: BalanceOf<T> =
-						user_scp.amount.try_into().or(Err(ArithmeticError::Overflow))?;
+					let user_scp_amount_sb: BalanceOf<T> = user_scp
+						.amount
+						.try_into()
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					if let Some(mut ncp) = <NativeCheckpoint<T>>::get() {
-						ncp.withdraw(user_scp_amount_sb).ok_or(ArithmeticError::Overflow)?;
+						ncp.withdraw(user_scp_amount_sb).ok_or(ArithmeticError::Underflow)?;
 						<NativeCheckpoint<T>>::put(ncp);
 					}
 					// Clean user stable staking storage
@@ -903,7 +933,7 @@ pub mod pallet {
 						} else {
 							user_ncp
 								.withdraw(user_scp_amount_sb)
-								.ok_or(ArithmeticError::Overflow)?;
+								.ok_or(ArithmeticError::Underflow)?;
 							<UserNativeCheckpoint<T>>::insert(who.clone(), user_ncp);
 						}
 					}

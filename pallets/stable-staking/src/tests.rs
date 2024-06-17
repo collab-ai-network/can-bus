@@ -6,7 +6,6 @@ use super::{
 	*,
 };
 use frame_support::{assert_noop, assert_ok};
-use sp_runtime::ArithmeticError;
 
 fn next_block() {
 	System::set_block_number(System::block_number() + 1);
@@ -22,7 +21,6 @@ fn fast_forward_to(n: u64) {
 #[test]
 fn can_not_create_pool_already_started_or_existed() {
 	new_test_ext().execute_with(|| {
-		fast_forward_to(101);
 		// Create stable staking pool
 		let pool_setup: PoolSetting<u64, u64> = PoolSetting {
 			start_time: 100u64,
@@ -42,10 +40,21 @@ fn can_not_create_pool_already_started_or_existed() {
 			Error::<Test>::PoolAlreadyStarted
 		);
 		// Create another pool is fine
-		assert_ok!(StableStaking::create_staking_pool(RuntimeOrigin::root(), 2u128, pool_setup));
+		let another_pool_setup: PoolSetting<u64, u64> = PoolSetting {
+			start_time: 150u64,
+			epoch: 10u128,
+			epoch_range: 100u64,
+			setup_time: 200u64,
+			pool_cap: 1_000_000_000u64,
+		};
+		assert_ok!(StableStaking::create_staking_pool(
+			RuntimeOrigin::root(),
+			2u128,
+			another_pool_setup
+		));
 		assert_events(vec![RuntimeEvent::StableStaking(Event::StakingPoolCreated {
 			pool_id: 2u128,
-			start_time: 100u64,
+			start_time: 150u64,
 			epoch: 10u128,
 			epoch_range: 100u64,
 			setup_time: 200u64,
@@ -60,6 +69,8 @@ fn can_not_create_pool_already_started_or_existed() {
 #[test]
 fn update_reward_successful_and_failed() {
 	new_test_ext().execute_with(|| {
+		let stable_token_pool: u64 = StakingPoolId::get().into_account_truncating();
+
 		// update epoch 0 reward with amount of 2000
 		assert_ok!(StableStaking::update_reward(RuntimeOrigin::root(), 1u128, 0u128, 2000u64));
 		assert_events(vec![RuntimeEvent::StableStaking(Event::RewardUpdated {
@@ -75,8 +86,7 @@ fn update_reward_successful_and_failed() {
 		);
 		assert_eq!(StableStaking::stable_staking_pool_epoch_reward(1u128, 1u128), None);
 		// Staking pool balance effective
-		let native_token_pool: u64 = HavlingMintId::get().into_account_truncating();
-		assert_eq!(Balances::free_balance(native_token_pool), ENDOWED_BALANCE + 2000u64);
+		assert_eq!(Assets::balance(1u32, stable_token_pool), 2000u64);
 
 		// Can not update epoch reward twice
 		assert_noop!(
@@ -127,7 +137,7 @@ fn update_reward_successful_and_failed() {
 #[test]
 fn stake_successful_and_failed() {
 	new_test_ext().execute_with(|| {
-		let native_token_pool: u64 = HavlingMintId::get().into_account_truncating();
+		let stable_token_pool: u64 = StakingPoolId::get().into_account_truncating();
 
 		// Can not stake non-exist pool
 		assert_noop!(
@@ -158,7 +168,8 @@ fn stake_successful_and_failed() {
 			target_effective_time: 600u64,
 			amount: 2000u64,
 		})]);
-		assert_eq!(Assets::balance(1u32, native_token_pool), ENDOWED_BALANCE + 2000u64);
+		assert_eq!(Assets::balance(1u32, USER_A), ENDOWED_BALANCE - 2000u64);
+		assert_eq!(Assets::balance(1u32, stable_token_pool), 2000u64);
 		let global_staking_info = StableStaking::native_checkpoint().unwrap();
 		assert_eq!(
 			global_staking_info,
@@ -189,20 +200,22 @@ fn stake_successful_and_failed() {
 		);
 
 		// Second user B stake
-		fast_forward_to(311u64);
+		System::set_block_number(399u64);
+		fast_forward_to(411u64);
 		assert_ok!(StableStaking::stake(RuntimeOrigin::signed(USER_B), 1u128, 1000u64));
 		assert_events(vec![RuntimeEvent::StableStaking(Event::Staked {
 			who: USER_B,
 			pool_id: 1u128,
-			target_effective_time: 600u64,
+			target_effective_time: 700u64,
 			amount: 1000u64,
 		})]);
-		assert_eq!(Assets::balance(1u32, native_token_pool), ENDOWED_BALANCE + 2000u64 + 1000u64);
+		assert_eq!(Assets::balance(1u32, USER_B), ENDOWED_BALANCE - 1000u64);
+		assert_eq!(Assets::balance(1u32, stable_token_pool), 2000u64 + 1000u64);
 		let global_staking_info = StableStaking::native_checkpoint().unwrap();
-		// Synthetic (301, 2000), (311, 1000) = (304.3333, 3000)
+		// Synthetic (301, 2000), (411, 1000) = (337.6666, 3000)
 		assert_eq!(
 			global_staking_info,
-			StakingInfo { effective_time: 304, amount: 3000u64, last_add_time: 311 }
+			StakingInfo { effective_time: 337, amount: 3000u64, last_add_time: 411 }
 		);
 		// user a unchanged
 		let user_a_staking_info = StableStaking::user_native_checkpoint(USER_A).unwrap();
@@ -214,13 +227,16 @@ fn stake_successful_and_failed() {
 		let user_b_staking_info = StableStaking::user_native_checkpoint(USER_B).unwrap();
 		assert_eq!(
 			user_b_staking_info,
-			StakingInfo { effective_time: 311, amount: 1000u64, last_add_time: 311 }
+			StakingInfo { effective_time: 411, amount: 1000u64, last_add_time: 411 }
 		);
 		// Pending set up storage change
 		let pending_set_up = StableStaking::pending_setup();
 		assert_eq!(pending_set_up.len(), 2);
+		// pending set up is ordered by effective time, so user_b's request is at index 1 while
+		// user_a is at index 0
+		let pending_set_up_element = pending_set_up.get(1).unwrap();
 		// Pool set up time = 200
-		// So user enter at 311 need to wait till 600 to make it effective and receiving Stable
+		// So user enter at 411 need to wait till 700 to make it effective and receiving Stable
 		// staking reward
 		assert_eq!(
 			*pending_set_up_element,
@@ -228,9 +244,9 @@ fn stake_successful_and_failed() {
 				who: USER_B,
 				pool_id: 1u128,
 				staking_info: StakingInfo {
-					effective_time: 600,
+					effective_time: 700,
 					amount: 1000u64,
-					last_add_time: 600
+					last_add_time: 700
 				}
 			}
 		);
@@ -301,11 +317,12 @@ fn solve_pending_stake_and_hook_works() {
 		assert!(StableStaking::user_stable_staking_pool_checkpoint(USER_B, 1u128).is_none());
 
 		// Any one can trigger manual
+		// But effective time will be the time when triggered, which is 910
 		assert_ok!(StableStaking::solve_pending_stake(RuntimeOrigin::signed(USER_C)));
 		assert_events(vec![RuntimeEvent::StableStaking(Event::PendingStakingSolved {
 			who: USER_B,
 			pool_id: 1u128,
-			effective_time: 900u64,
+			effective_time: 910u64,
 			amount: 1000u64,
 		})]);
 		let pending_set_up = StableStaking::pending_setup();
@@ -353,10 +370,10 @@ fn claim_native_successful_and_failed() {
 
 		System::set_block_number(601u64);
 		// User_a try claim before 401, failed since it is not allowed to claim before last_add_time
-		// TODO:: ArithmeticError::Overflow is not specific enough
+		// TODO:: TypeIncompatibleOrArithmeticError is not specific enough
 		assert_noop!(
 			StableStaking::claim_native(RuntimeOrigin::signed(USER_A), 400),
-			ArithmeticError::Overflow
+			Error::<Test>::TypeIncompatibleOrArithmeticError
 		);
 
 		// A normal claim until 501 at time 601
@@ -368,12 +385,12 @@ fn claim_native_successful_and_failed() {
 			RuntimeEvent::Balances(pallet_balances::Event::Transfer {
 				from: native_token_pool,
 				to: USER_A,
-				amount: 8_571_428_571,
+				amount: 8_571_428_571u64,
 			}),
 			RuntimeEvent::StableStaking(Event::NativeRewardClaimed {
 				who: USER_A,
 				until_time: 501,
-				reward_amount: 1000u64,
+				reward_amount: 8_571_428_571u64,
 			}),
 		]);
 		// After claim
@@ -405,7 +422,9 @@ fn claim_native_successful_and_failed() {
 
 #[test]
 fn claim_stable_successful_and_failed() {
-	new_test_ext().execute_with(|| {})
+	new_test_ext().execute_with(|| {
+		let _stable_token_pool: u64 = StakingPoolId::get().into_account_truncating();
+	})
 }
 
 #[test]
@@ -429,6 +448,6 @@ fn get_epoch_begin_time() {
 }
 
 // pending swap storage does get a proper order for multiple pools and can handle multiple pending
-// orders double add behavior of checkpoint
-// claim reward behavior of checkpoint
-// withdraw behavior of checkingpoint
+// orders double add at same time behavior of (native) stable checkpoint
+// claim reward behavior of native and stable checkpoint
+// withdraw behavior of native and stable checkingpoint
