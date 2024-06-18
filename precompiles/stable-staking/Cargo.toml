@@ -20,6 +20,8 @@ precompile-utils = { workspace = true }
 # Substrate
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-balances = { workspace = true }
 pallet-stable-staking = { workspace = true }
 pallet-timestamp = { workspace = true }
 codec = { workspace = true, features = [ "max-encoded-len" ] }
@@ -54,6 +56,8 @@ std = [
 	"fp-evm/std",
 	"frame-support/std",
 	"frame-system/std",
+	"pallet-assets/std",
+	"pallet-balances/std",
 	"pallet-stable-staking/std",
 	"pallet-evm/std",
 	"pallet-timestamp/std",

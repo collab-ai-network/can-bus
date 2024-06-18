@@ -7,7 +7,7 @@ use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
 use sp_runtime::traits::Dispatchable;
 
-use sp_core::H160;
+use sp_core::{H160, U256};
 use sp_std::marker::PhantomData;
 
 /// Alias for the Balance type for the provided Runtime and Instance.
@@ -27,11 +27,11 @@ use frame_system::pallet_prelude::BlockNumberFor;
 /// Helper struct used to encode PoolSetting.
 #[derive(Debug, Clone, solidity::Codec)]
 pub(crate) struct PrecompilePoolSetting {
-	startTime: U256,
+	start_time: U256,
 	epoch: U256,
-	epochRange: U256,
-	setupTime: U256,
-	poolCap: U256,
+	epoch_range: U256,
+	setup_time: U256,
+	pool_cap: U256,
 }
 
 /// @notice Describes an acutal/synthetic staking position.
@@ -41,9 +41,9 @@ pub(crate) struct PrecompilePoolSetting {
 /// Helper struct used to encode StakingInfo.
 #[derive(Debug, Clone, solidity::Codec)]
 pub(crate) struct PrecompileStakingInfo {
-	effectiveTime: U256,
+	effective_time: U256,
 	amount: U256,
-	lastAddTime: U256,
+	last_add_time: U256,
 }
 
 pub struct PalletStableStakingPrecompile<Runtime>(PhantomData<Runtime>);
@@ -154,7 +154,7 @@ where
 
 	#[precompile::public("userStableStakingPoolCheckpoint(address,uint256)")]
 	#[precompile::view]
-	fn user_stable_staking_pool_checkpoint(
+	fn user_stable_staking_pool_checkpoint_evm(
 		handle: &mut impl PrecompileHandle,
 		user: Address,
 		pool: U256,
@@ -163,7 +163,7 @@ where
 
 	#[precompile::public("userStableStakingPoolCheckpoint(bytes32,uint256)")]
 	#[precompile::view]
-	fn user_stable_staking_pool_checkpoint(
+	fn user_stable_staking_pool_checkpoint_sub(
 		handle: &mut impl PrecompileHandle,
 		user: H256,
 		pool: U256,
@@ -176,7 +176,7 @@ where
 
 	#[precompile::public("userNativeCheckpoint(address)")]
 	#[precompile::view]
-	fn user_native_checkpoint(
+	fn user_native_checkpoint_evm(
 		handle: &mut impl PrecompileHandle,
 		user: Address,
 	) -> EvmResult<PrecompileStakingInfo> {
@@ -184,7 +184,7 @@ where
 
 	#[precompile::public("userNativeCheckpoint(bytes32)")]
 	#[precompile::view]
-	fn user_native_checkpoint(
+	fn user_native_checkpoint_sub(
 		handle: &mut impl PrecompileHandle,
 		user: H256,
 	) -> EvmResult<PrecompileStakingInfo> {

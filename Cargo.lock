@@ -2339,6 +2339,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4443176a9f2c162692bd3d352d745ef9413eec5782a80d8fd6f8a1ac692a07f7"
 
 [[package]]
+name = "faster-hex"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51e2ce894d53b295cf97b05685aa077950ff3e8541af83217fc720a6437169f8"
+
+[[package]]
 name = "fastrand"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5670,6 +5676,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-evm-precompile-assets-erc20"
+version = "0.5.2"
+dependencies = [
+ "derive_more",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "log",
+ "num_enum 0.5.11",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-evm",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "slices",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=polkadot-v1.3.0#e262e80f3083ea8df90bd71a827789bef810f6aa"
@@ -5810,6 +5842,33 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-stable-staking-precompile"
+version = "0.0.0"
+dependencies = [
+ "derive_more",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "log",
+ "num_enum 0.5.11",
+ "pallet-evm",
+ "pallet-stable-staking",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "paste",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -8456,6 +8515,18 @@ name = "slice-group-by"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "826167069c09b99d56f31e9ae5c99049e932a98c9dc2dac47645b08dbbf76ba7"
+
+[[package]]
+name = "slices"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2086e458a369cdca838e9f6ed04b4cc2e3ce636d99abb80c9e2eada107749cf"
+dependencies = [
+ "faster-hex",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
 
 [[package]]
 name = "smallvec"
