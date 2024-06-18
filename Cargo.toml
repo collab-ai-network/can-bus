@@ -58,6 +58,7 @@ scale-info = { version = "2.11", default-features = false, features = ["derive",
 codec = { package = "parity-scale-codec", version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0", default-features = false }
+slices = { version = "0.2.0" }
 hex = { version = "0.4", default-features = false }
 hex-literal = { version = "0.4", default-features = false }
 futures = { version = "0.3.30", features = ["thread-pool"] }
@@ -188,4 +189,5 @@ pallet-stable-staking = { path = "pallets/stable-staking", default-features = fa
 pallet-template = { path = "pallets/template", default-features = false }
 pallet-halving-mint = { path = "pallets/halving-mint", default-features = false }
 canbus-runtime = { path = "runtime", default-features = false }
-pallet-template-precompile = { path = "precompiles/pallet-template", default-features = false }
+pallet-template-precompile = { path = "precompiles/template", default-features = false }
+pallet-evm-precompile-assets-erc20 =  { path = "precompiles/assets-erc20", default-features = false }

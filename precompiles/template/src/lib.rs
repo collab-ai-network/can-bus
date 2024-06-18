@@ -92,8 +92,9 @@ where
 
 	#[precompile::public("causeError()")]
 	fn cause_error(handle: &mut impl PrecompileHandle) -> EvmResult {
-		// read a storage with type u32, 8 bytes
-		handle.record_db_read::<Runtime>(8)?;
+		// suppose read a storage with type u32, 4 bytes
+		// handle.record_db_read::<Runtime>(4)?;
+		// But try_dispatch does not count
 
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
