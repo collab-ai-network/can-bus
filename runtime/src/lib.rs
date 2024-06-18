@@ -6,7 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use codec::{Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use fp_evm::weight_per_gas;
 use fp_rpc::TransactionStatus;
 use pallet_grandpa::AuthorityId as GrandpaId;
@@ -19,8 +19,9 @@ use sp_core::{
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable, Get,
-		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, UniqueSaturatedInto, Verify,
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf,
+		Dispatchable, Get, IdentifyAccount, NumberFor, One, PostDispatchInfoOf,
+		UniqueSaturatedInto, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
 	ApplyExtrinsicResult, MultiSignature,
@@ -34,8 +35,8 @@ use frame_support::genesis_builder_helper::{build_config, create_default_config}
 pub use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{
-		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, FindAuthor, KeyOwnerProofSystem,
-		OnFinalize, Randomness, StorageInfo,
+		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, FindAuthor,
+		KeyOwnerProofSystem, OnFinalize, Randomness, SortedMembers, StorageInfo,
 	},
 	weights::{
 		constants::{
@@ -46,6 +47,7 @@ pub use frame_support::{
 	ConsensusEngineId, PalletId, StorageValue,
 };
 pub use frame_system::Call as SystemCall;
+use frame_system::{EnsureRoot, EnsureSigned};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
@@ -72,8 +74,14 @@ pub type Signature = MultiSignature;
 /// to the public key of our transaction signing scheme.
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
+/// Asset id
+pub type AssetId = u128;
+
 /// Balance of an account.
 pub type Balance = u128;
+
+/// Pool id
+pub type PoolId = u128;
 
 /// Index of a transaction in the chain.
 pub type Nonce = u32;
@@ -400,6 +408,115 @@ impl pallet_halving_mint::Config for Runtime {
 	type OnTokenMinted = ();
 }
 
+/// Charge fee for stored bytes and items.
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+	items as Balance * UNIT + (bytes as Balance) * UNIT
+}
+
+parameter_types! {
+	pub const AssetDeposit: Balance = 1_000_000_000_000_000_000;
+	pub const AssetsStringLimit: u32 = 50;
+	/// Key = 32 bytes, Value = 36 bytes (32+1+1+1+1)
+	// https://github.com/paritytech/substrate/blob/069917b/frame/assets/src/lib.rs#L257L271
+	pub const MetadataDepositBase: Balance = deposit(1, 68);
+	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
+	pub const AssetAccountDeposit: Balance = deposit(1, 18);
+}
+
+pub struct AssetsBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl<AssetIdParameter: From<u128>> pallet_assets::BenchmarkHelper<AssetIdParameter>
+	for AssetsBenchmarkHelper
+{
+	fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+		AssetId::from(id).into()
+	}
+}
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type AssetAccountDeposit = AssetAccountDeposit;
+	type ApprovalDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
+	type StringLimit = AssetsStringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type RemoveItemsLimit = ConstU32<1000>;
+	type AssetIdParameter = Compact<AssetId>;
+	type CallbackHandle = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AssetsBenchmarkHelper;
+}
+
+parameter_types! {
+	pub const BridgeChainId: u8 = 2; // TODO: Determine our chain id
+	pub const ProposalLifetime: BlockNumber = 50400; // ~7 days
+	pub const TreasuryPalletId: PalletId = PalletId(*b"can/bdge");
+	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
+
+impl pallet_bridge::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type BridgeCommitteeOrigin = EnsureRoot<AccountId>;
+	type Proposal = RuntimeCall;
+	type BridgeChainId = BridgeChainId;
+	type Balance = Balance;
+	type ProposalLifetime = ProposalLifetime;
+	type WeightInfo = ();
+}
+
+// allow anyone to call transfer_native
+pub struct TransferNativeAnyone;
+impl SortedMembers<AccountId> for TransferNativeAnyone {
+	fn sorted_members() -> Vec<AccountId> {
+		vec![]
+	}
+
+	fn contains(_who: &AccountId) -> bool {
+		true
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn add(_: &AccountId) {
+		unimplemented!()
+	}
+}
+
+impl pallet_assets_handler::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type TreasuryAccount = TreasuryAccount;
+}
+
+impl pallet_bridge_transfer::Config for Runtime {
+	type BridgeOrigin = pallet_bridge::EnsureBridge<Runtime>;
+	type TransferNativeMembers = TransferNativeAnyone;
+	type BridgeHandler = AssetsHandler;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const StakingPoolId: PalletId = PalletId(*b"can/stpl");
+}
+
+impl pallet_stable_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type StakingPoolCommitteeOrigin = EnsureRoot<AccountId>;
+	type PoolId = PoolId;
+	type Fungibles = Assets;
+	type Fungible = Balances;
+	type StableTokenBeneficiaryId = StakingPoolId;
+	type NativeTokenBeneficiaryId = HavlingMintId;
+	type PoolStringLimit = ConstU32<100>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime {
@@ -414,8 +531,14 @@ construct_runtime!(
 		EVM: pallet_evm = 8,
 		EVMChainId: pallet_evm_chain_id = 9,
 		BaseFee: pallet_base_fee = 10,
-		Template: pallet_template = 11,
-		HalvingMint: pallet_halving_mint = 12,
+		// Include the custom logic from the pallet-template in the runtime.
+		Assets: pallet_assets = 11,
+		ChainBridge: pallet_bridge = 12,
+		AssetsHandler: pallet_assets_handler = 13,
+		BridgeTransfer: pallet_bridge_transfer = 14,
+		Template: pallet_template = 15,
+		HalvingMint: pallet_halving_mint = 16,
+		StableStaking: pallet_stable_staking = 17,
 	}
 );
 

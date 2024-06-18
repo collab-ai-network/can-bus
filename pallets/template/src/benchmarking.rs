@@ -1,5 +1,6 @@
 //! Benchmarking setup for pallet-template
 #![cfg(feature = "runtime-benchmarks")]
+#![allow(clippy::duplicated_attributes)]
 use super::*;
 use sp_std::vec;
 

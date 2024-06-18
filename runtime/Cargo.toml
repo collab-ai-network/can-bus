@@ -46,6 +46,7 @@ sp-version = { workspace = true, features = ["serde"] }
 sp-genesis-builder = { workspace = true }
 
 frame-system-rpc-runtime-api = { workspace = true }
+pallet-assets = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
 frame-system-benchmarking = { workspace = true, optional = true }
@@ -65,6 +66,10 @@ pallet-evm-precompile-modexp = { workspace = true }
 pallet-evm-precompile-sha3fips = { workspace = true }
 pallet-evm-precompile-simple = { workspace = true }
 
+pallet-assets-handler = { workspace = true }
+pallet-bridge = { workspace = true }
+pallet-bridge-transfer = { workspace = true }
+pallet-stable-staking = { workspace = true }
 pallet-template = { workspace = true }
 pallet-halving-mint = { workspace = true }
 
@@ -86,6 +91,7 @@ std = [
 	"frame-benchmarking?/std",
 	"frame-try-runtime?/std",
 
+	"pallet-assets/std",
 	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
@@ -124,6 +130,7 @@ std = [
     "pallet-evm-precompile-modexp/std",
     "pallet-evm-precompile-sha3fips/std",
 
+	"pallet-stable-staking/std",
 	"pallet-template/std",
 	"pallet-halving-mint/std",
 
@@ -135,6 +142,7 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
@@ -142,8 +150,10 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"pallet-ethereum/runtime-benchmarks",
 	"pallet-evm/runtime-benchmarks",
+	"pallet-stable-staking/runtime-benchmarks",
 	"pallet-template/runtime-benchmarks",
 	"pallet-halving-mint/runtime-benchmarks",
+	"pallet-bridge/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -152,6 +162,7 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"frame-try-runtime/try-runtime",
 	"pallet-aura/try-runtime",
+	"pallet-assets/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-grandpa/try-runtime",
 	"pallet-sudo/try-runtime",
@@ -163,6 +174,7 @@ try-runtime = [
     "pallet-evm/try-runtime",
 	"pallet-evm-chain-id/try-runtime",
 	"pallet-base-fee/try-runtime",
+	"pallet-stable-staking/try-runtime",
 	"pallet-template/try-runtime",
 	"pallet-halving-mint/try-runtime",
 ]

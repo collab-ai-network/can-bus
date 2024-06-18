@@ -8,8 +8,7 @@ homepage = "https://substrate.io"
 [workspace]
 members = [
     "node",
-    "pallets/halving-mint",
-    "pallets/template",
+    "pallets/*",
     "runtime",
     "precompiles/*",
 ]
@@ -51,6 +50,7 @@ default_constructed_unit_structs = { level = "allow", priority = 2 } # stylistic
 async-trait = { version = "0.1" }
 base58 = { version = "0.2", default-features = false }
 base64 = { version = "0.13", default-features = false, features = ["alloc"] }
+blake2-rfc = { version = "0.2.18", default-features = false }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 log = { version = "0.4", default-features = false }
@@ -105,6 +105,7 @@ substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk
 substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0" }
 
 # wasm
+sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 sp-core-hashing = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
@@ -134,6 +135,7 @@ frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 
+pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
@@ -179,6 +181,10 @@ precompile-utils = { git = "https://github.com/polkadot-evm/frontier", branch = 
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", default-features = false }
 
 # local
+pallet-assets-handler = { path = "pallets/assets-handler", default-features = false }
+pallet-bridge = { path = "pallets/bridge", default-features = false }
+pallet-bridge-transfer = { path = "pallets/bridge-transfer", default-features = false }
+pallet-stable-staking = { path = "pallets/stable-staking", default-features = false }
 pallet-template = { path = "pallets/template", default-features = false }
 pallet-halving-mint = { path = "pallets/halving-mint", default-features = false }
 canbus-runtime = { path = "runtime", default-features = false }

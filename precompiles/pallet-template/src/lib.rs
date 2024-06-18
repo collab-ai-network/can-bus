@@ -28,7 +28,7 @@ use sp_std::marker::PhantomData;
 
 /// Solidity selector of the pallet template log, which is the Keccak of the Log signature.
 /// Maybe we can omit the event since substrate will also have one?
-pub const SELECTOR_LOG_SOMETHING: [u8; 32] = keccak256!("SomethingStored(address,u32)");
+pub const SELECTOR_LOG_SOMETHING: [u8; 32] = keccak256!("SomethingStored(address,uint32)");
 
 pub struct PalletTemplatePrecompile<Runtime>(PhantomData<Runtime>);
 
@@ -59,7 +59,7 @@ where
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	Runtime::AccountId: Into<H160>,
 {
-	#[precompile::public("doSomething(u32)")]
+	#[precompile::public("doSomething(uint32)")]
 	fn do_something(handle: &mut impl PrecompileHandle, something: u32) -> EvmResult {
 		Self::do_something_inner(handle, something)?;
 

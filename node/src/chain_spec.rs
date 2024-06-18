@@ -119,5 +119,6 @@ fn build_genesis(
 		evm: Default::default(),
 		base_fee: Default::default(),
 		halving_mint: Default::default(),
+		assets: Default::default(),
 	}
 }
