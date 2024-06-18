@@ -7,7 +7,7 @@ use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
 use sp_runtime::traits::Dispatchable;
 
-use sp_core::{H160, U256};
+use sp_core::{H160, H256, U256};
 use sp_std::marker::PhantomData;
 
 /// Alias for the Balance type for the provided Runtime and Instance.
@@ -59,14 +59,14 @@ where
 {
 	#[precompile::public("stake(uint256,uint256)")]
 	fn stake(handle: &mut impl PrecompileHandle, pool: U256, amount: U256) -> EvmResult {
-		let origin = R::AddressMapping::into_account_id(handle.context().caller);
+		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into());
+			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
 		let amount: BalanceOf<Runtime> = amount
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into());
+			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
 
 		let call = pallet_stable_staking::Call::<Runtime>::stake { pool_id, amount };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
@@ -76,7 +76,7 @@ where
 
 	#[precompile::public("solvePendingStake()")]
 	fn solve_pending_stake(handle: &mut impl PrecompileHandle) -> EvmResult {
-		let origin = R::AddressMapping::into_account_id(handle.context().caller);
+		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let call = pallet_stable_staking::Call::<Runtime>::solve_pending_stake {};
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
@@ -85,11 +85,11 @@ where
 
 	#[precompile::public("claimNative(uint256)")]
 	fn claim_native(handle: &mut impl PrecompileHandle, until_time: U256) -> EvmResult {
-		let origin = R::AddressMapping::into_account_id(handle.context().caller);
+		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let until_time: BlockNumberFor<Runtime> = until_time
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into());
+			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
 		let call = pallet_stable_staking::Call::<Runtime>::claim_native { until_time };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
@@ -97,23 +97,24 @@ where
 
 	#[precompile::public("claimStable(uint256,uint256)")]
 	fn claim_stable(handle: &mut impl PrecompileHandle, pool: U256, until_time: U256) -> EvmResult {
-		let origin = R::AddressMapping::into_account_id(handle.context().caller);
+		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let until_time: BlockNumberFor<Runtime> = until_time
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into());
-		let call = pallet_stable_staking::Call::<Runtime>::claim_stable { until_time };
+			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
+		let call =
+			pallet_stable_staking::Call::<Runtime>::claim_stable { pool_id: pool, until_time };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
 	}
 
 	#[precompile::public("withdraw(uint256)")]
 	fn withdraw(handle: &mut impl PrecompileHandle, pool: U256) -> EvmResult {
-		let origin = R::AddressMapping::into_account_id(handle.context().caller);
+		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into());
+			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
 		let call = pallet_stable_staking::Call::<Runtime>::withdraw { pool_id };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
