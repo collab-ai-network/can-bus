@@ -56,7 +56,7 @@ where
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_stable_staking::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
-	Runtime::AccountId: From<H256>,
+	Runtime::AccountId: From<[u8; 32]>,
 	BalanceOf<Runtime>: TryFrom<U256> + Into<U256> + Zero,
 	Runtime::PoolId: TryFrom<U256>,
 	BlockNumberFor<Runtime>: TryFrom<U256> + Into<U256>,
