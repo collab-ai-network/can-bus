@@ -62,8 +62,11 @@ use pallet_ethereum::{
 use pallet_evm::{Account as EVMAccount, FeeCalculator, Runner};
 
 mod precompiles;
+use crate::precompiles::ASSET_PRECOMPILE_ADDRESS_PREFIX;
+use pallet_evm_precompile_assets_erc20::AddressToAssetId;
 use precompiles::Precompiles;
-pub type CanPrecompiles = Precompiles<Runtime>;
+
+pub type CanPrecompiles<Runtime> = Precompiles<Runtime>;
 
 /// An index to a block.
 pub type BlockNumber = u32;

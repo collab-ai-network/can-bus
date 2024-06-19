@@ -68,6 +68,8 @@ pallet-evm-precompile-ed25519 = { workspace = true }
 pallet-evm-precompile-modexp = { workspace = true }
 pallet-evm-precompile-sha3fips = { workspace = true }
 pallet-evm-precompile-simple = { workspace = true }
+pallet-stable-staking-precompile = { workspace = true }
+pallet-bridge-transfer-precompile = { workspace = true }
 precompile-utils = { workspace = true }
 
 pallet-assets-handler = { workspace = true }
@@ -133,6 +135,8 @@ std = [
     "pallet-evm-precompile-ed25519/std",
     "pallet-evm-precompile-modexp/std",
     "pallet-evm-precompile-sha3fips/std",
+	"pallet-stable-staking-precompile/std",
+	"pallet-bridge-transfer-precompile/std",
 
 	"pallet-stable-staking/std",
 	"pallet-template/std",
