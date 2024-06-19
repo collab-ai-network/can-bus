@@ -58,8 +58,8 @@ where
 	Runtime::RuntimeCall: From<pallet_stable_staking::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	Runtime::AccountId: Into<H160>,
-	BalanceOf<Runtime>: Into<U256>,
-	Runtime::PoolId: Into<U256>,
+	BalanceOf<Runtime>: TryFrom<U256>,
+	Runtime::PoolId: TryFrom<U256>,
 {
 	#[precompile::public("stake(uint256,uint256)")]
 	fn stake(handle: &mut impl PrecompileHandle, pool: U256, amount: U256) -> EvmResult {
