@@ -313,7 +313,7 @@ where
 		// Twox64(8) + 32 + 16 + 4 * 2 = 64
 		handle.record_db_read::<Runtime>(64)?;
 
-		let user = user.try_into().map_err(|_| {
+		let user: Runtime::AccountId = user.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("address type"))
 		})?;
 		let staking_info = UserNativeCheckpoint::<Runtime>::get(user)

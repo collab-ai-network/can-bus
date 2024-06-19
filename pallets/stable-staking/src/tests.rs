@@ -80,10 +80,7 @@ fn update_reward_successful_and_failed() {
 		})]);
 		// Staking pool reward storage efffective
 		assert_eq!(StableStaking::stable_staking_pool_reward(1u128), 2000u64);
-		assert_eq!(
-			StableStaking::stable_staking_pool_epoch_reward(1u128, 0u128),
-			Some(StableRewardInfo { epoch: 0u128, reward_amount: 2000u64 })
-		);
+		assert_eq!(StableStaking::stable_staking_pool_epoch_reward(1u128, 0u128), Some(2000u64));
 		assert_eq!(StableStaking::stable_staking_pool_epoch_reward(1u128, 1u128), None);
 		// Staking pool balance effective
 		assert_eq!(Assets::balance(1u32, stable_token_pool), 2000u64);
