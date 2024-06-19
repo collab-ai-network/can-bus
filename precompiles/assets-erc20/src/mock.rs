@@ -39,7 +39,7 @@ impl AddressToAssetId<AssetId> for Runtime {
 	fn address_to_asset_id(address: H160) -> Option<AssetId> {
 		let address: MockAccount = address.into();
 		if address.has_prefix_u32(ASSET_PRECOMPILE_ADDRESS_PREFIX) {
-			Some(address.without_prefix());
+			Some(address.without_prefix())
 		} else {
 			None
 		}
