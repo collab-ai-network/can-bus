@@ -60,6 +60,7 @@ where
 	Runtime::AccountId: Into<H160>,
 	BalanceOf<Runtime>: TryFrom<U256>,
 	Runtime::PoolId: TryFrom<U256>,
+	BlockNumberFor<Runtime>: TryFrom<U256>,
 {
 	#[precompile::public("stake(uint256,uint256)")]
 	fn stake(handle: &mut impl PrecompileHandle, pool: U256, amount: U256) -> EvmResult {
@@ -103,11 +104,13 @@ where
 	fn claim_stable(handle: &mut impl PrecompileHandle, pool: U256, until_time: U256) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
+		let pool_id: PoolId<Runtime> = pool.try_into().map_err(|_| {
+			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("pool index type"))
+		})?;
 		let until_time: BlockNumberFor<Runtime> = until_time.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("block number type"))
 		})?;
-		let call =
-			pallet_stable_staking::Call::<Runtime>::claim_stable { pool_id: pool, until_time };
+		let call = pallet_stable_staking::Call::<Runtime>::claim_stable { pool_id, until_time };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
 	}
