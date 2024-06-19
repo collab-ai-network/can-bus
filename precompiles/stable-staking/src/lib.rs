@@ -59,7 +59,7 @@ where
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	Runtime::AccountId: Into<H160>,
 	BalanceOf<Runtime>: TryInto<U256>,
-	Runtime::Poolid: TryInto<U256>,
+	Runtime::PoolId: TryInto<U256>,
 {
 	#[precompile::public("stake(uint256,uint256)")]
 	fn stake(handle: &mut impl PrecompileHandle, pool: U256, amount: U256) -> EvmResult {
