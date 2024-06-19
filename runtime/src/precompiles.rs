@@ -6,6 +6,7 @@ use frame_support::{
 	parameter_types,
 	traits::Contains,
 };
+use pallet_bridge_transfer_precompile::BridgeTransferPrecompile;
 use pallet_evm_precompile_assets_erc20::Erc20AssetsPrecompileSet;
 use pallet_evm_precompile_blake2::Blake2F;
 use pallet_evm_precompile_bn128::{Bn128Add, Bn128Mul, Bn128Pairing};
@@ -14,6 +15,7 @@ use pallet_evm_precompile_ed25519::Ed25519Verify;
 use pallet_evm_precompile_modexp::Modexp;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
 use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripemd160, Sha256};
+use pallet_stable_staking_precompile::StableStakingPrecompile;
 use precompile_utils::precompile_set::*;
 use sp_std::fmt::Debug;
 /// The asset precompile address prefix. Addresses that match against this prefix will be routed
@@ -60,9 +62,6 @@ pub struct WhitelistedCalls;
 impl Contains<RuntimeCall> for WhitelistedCalls {
 	fn contains(t: &RuntimeCall) -> bool {
 		match t {
-			RuntimeCall::Utility(pallet_utility::Call::batch { calls }) |
-			RuntimeCall::Utility(pallet_utility::Call::batch_all { calls }) =>
-				calls.iter().all(|call| WhitelistedCalls::contains(call)),
 			RuntimeCall::Assets(pallet_assets::Call::transfer { .. }) => true,
 			_ => false,
 		}
