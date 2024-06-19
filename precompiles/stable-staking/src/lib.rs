@@ -10,11 +10,8 @@ use sp_runtime::traits::Dispatchable;
 use sp_core::{H160, H256, U256};
 use sp_std::marker::PhantomData;
 
-/// Alias for the Balance type for the provided Runtime and Instance.
-pub type NativeBalanceOf<Runtime, Instance = ()> =
-	<Runtime as pallet_balances::Config<Instance>>::Balance;
-/// Alias for the Balance type for the provided Runtime and Instance.
-pub type BalanceOf<Runtime, Instance = ()> = <Runtime as pallet_assets::Config<Instance>>::Balance;
+use pallet_stable_staking::{BalanceOf, NativeBalanceOf};
+
 pub type PoolId<Runtime> = <Runtime as pallet_stable_staking::Config>::PoolId;
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_stable_staking::{

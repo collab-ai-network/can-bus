@@ -13,6 +13,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
+use sp_core::U256;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
@@ -183,9 +184,9 @@ pub mod pallet {
 
 	use super::*;
 
-	type BalanceOf<T> =
+	pub type BalanceOf<T> =
 		<<T as Config>::Fungibles as FsInspect<<T as frame_system::Config>::AccountId>>::Balance;
-	type NativeBalanceOf<T> =
+	pub type NativeBalanceOf<T> =
 		<<T as Config>::Fungible as FInspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 	/// The current storage version.
@@ -207,7 +208,7 @@ pub mod pallet {
 		/// Identifier for the class of pool.
 		type PoolId: Member
 			+ Parameter
-			+ From<sp_core::U256>
+			+ From<U256>
 			+ Clone
 			+ MaybeSerializeDeserialize
 			+ MaxEncodedLen
