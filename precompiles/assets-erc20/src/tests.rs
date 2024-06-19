@@ -1,3 +1,4 @@
+#![allow(clippy::needless_borrows_for_generic_args)]
 use frame_support::assert_ok;
 use sp_runtime::traits::Zero;
 use std::str::from_utf8;
