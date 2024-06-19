@@ -10,7 +10,7 @@ use sp_runtime::traits::Dispatchable;
 use sp_core::{H160, H256, U256};
 use sp_std::marker::PhantomData;
 
-use pallet_stable_staking::{BalanceOf, NativeBalanceOf};
+use pallet_stable_staking::BalanceOf;
 
 pub type PoolId<Runtime> = <Runtime as pallet_stable_staking::Config>::PoolId;
 use frame_system::pallet_prelude::BlockNumberFor;
@@ -58,6 +58,8 @@ where
 	Runtime::RuntimeCall: From<pallet_stable_staking::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	Runtime::AccountId: Into<H160>,
+	BalanceOf<Runtime>: TryInto<U256>,
+	Runtime::Poolid: TryInto<U256>,
 {
 	#[precompile::public("stake(uint256,uint256)")]
 	fn stake(handle: &mut impl PrecompileHandle, pool: U256, amount: U256) -> EvmResult {

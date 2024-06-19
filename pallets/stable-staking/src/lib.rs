@@ -13,7 +13,6 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 pub use pallet::*;
-use sp_core::U256;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
@@ -208,7 +207,6 @@ pub mod pallet {
 		/// Identifier for the class of pool.
 		type PoolId: Member
 			+ Parameter
-			+ From<U256>
 			+ Clone
 			+ MaybeSerializeDeserialize
 			+ MaxEncodedLen
