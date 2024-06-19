@@ -56,7 +56,7 @@ where
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_stable_staking::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
-	Runtime::AccountId: Into<H160>,
+	Runtime::AccountId: From<H256>,
 	BalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
 	Runtime::PoolId: TryFrom<U256>,
 	BlockNumberFor<Runtime>: TryFrom<U256> + Into<U256>,
@@ -256,7 +256,7 @@ where
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("pool index type"))
 		})?;
 		let staking_info = UserStableStakingPoolCheckpoint::<Runtime>::get(user, pool_id)
-			.ok_or(RevertReason::Custom("not existing".into()))?;
+			.ok_or(Err(RevertReason::Custom("not existing".into())))?;
 
 		Ok(PrecompileStakingInfo {
 			effective_time: staking_info.effective_time.into(),
