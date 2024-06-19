@@ -40,7 +40,7 @@ impl Contains<RuntimeCall> for WhitelistedCalls {
 
 /// The PrecompileSet installed in the CAN runtime.
 #[precompile_utils::precompile_name_from_address]
-pub type PrecompilesSetAt<R, C> = (
+pub type PrecompilesSetAt<R> = (
 	// Ethereum precompiles:
 	// We allow DELEGATECALL to stay compliant with Ethereum behavior.
 	PrecompileAt<AddressU64<1>, ECRecover, EthereumPrecompilesChecks>,
@@ -76,14 +76,14 @@ pub type PrecompilesSetAt<R, C> = (
 	>,
 );
 
-pub type Precompiles<R, C> = PrecompileSetBuilder<
+pub type Precompiles<R> = PrecompileSetBuilder<
 	R,
 	(
 		// Skip precompiles if out of range.
 		PrecompilesInRangeInclusive<
 			// We take range as last precompile index, UPDATE this once new prcompile is added
 			(AddressU64<1>, AddressU64<20482>),
-			PrecompilesSetAt<R, C>,
+			PrecompilesSetAt<R>,
 		>,
 		// Prefixed precompile sets (XC20)
 		PrecompileSetStartingWith<AssetPrefix, Erc20AssetsPrecompileSet<R>, CallableByContract>,
