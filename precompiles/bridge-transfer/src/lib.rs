@@ -7,10 +7,10 @@ use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
 use sp_runtime::traits::Dispatchable;
 
-use sp_core::{H160, H256, U256};
+use sp_core::{H256, U256};
 use sp_std::marker::PhantomData;
 
-use pallet_bridge_transfer::{BalanceOf, BridgeChainId, ResourceId};
+use pallet_bridge_transfer::BalanceOf;
 
 pub struct BridgeTransferPrecompile<Runtime>(PhantomData<Runtime>);
 

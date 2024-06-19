@@ -153,7 +153,7 @@ where
 
 	#[precompile::public("stableStakingPoolReward(uint256)")]
 	#[precompile::view]
-	fn stable_staking_pool_rReward(
+	fn stable_staking_pool_reward(
 		handle: &mut impl PrecompileHandle,
 		pool: U256,
 	) -> EvmResult<U256> {
@@ -249,9 +249,7 @@ where
 		// Twox64(8) * 2 + 32 + 16 + 16 + 4 * 2 = 88
 		handle.record_db_read::<Runtime>(48)?;
 
-		let user: Runtime::AccountId = user.try_into().map_err(|_| {
-			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("address type"))
-		})?;
+		let user: Runtime::AccountId = user.into();
 		let pool_id: PoolId<Runtime> = pool.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("pool index type"))
 		})?;
@@ -313,9 +311,7 @@ where
 		// Twox64(8) + 32 + 16 + 4 * 2 = 64
 		handle.record_db_read::<Runtime>(64)?;
 
-		let user: Runtime::AccountId = user.try_into().map_err(|_| {
-			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("address type"))
-		})?;
+		let user: Runtime::AccountId = user.into();
 		let staking_info = UserNativeCheckpoint::<Runtime>::get(user)
 			.ok_or(RevertReason::Custom("not existing".into()))?;
 

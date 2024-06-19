@@ -1,10 +1,9 @@
 use crate::RuntimeCall;
-use astar_primitives::precompiles::DispatchFilterValidate;
 use frame_support::{parameter_types, traits::Contains};
 use pallet_evm_precompile_assets_erc20::Erc20AssetsPrecompileSet;
 use pallet_evm_precompile_blake2::Blake2F;
 use pallet_evm_precompile_bn128::{Bn128Add, Bn128Mul, Bn128Pairing};
-use pallet_evm_precompile_dispatch::Dispatch;
+use pallet_evm_precompile_dispatch::{Dispatch, DispatchValidateT};
 use pallet_evm_precompile_ed25519::Ed25519Verify;
 use pallet_evm_precompile_modexp::Modexp;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
@@ -18,6 +17,34 @@ use sp_std::fmt::Debug;
 pub const ASSET_PRECOMPILE_ADDRESS_PREFIX: &[u8] = &[255u8; 4];
 parameter_types! {
 	pub AssetPrefix: &'static [u8] = ASSET_PRECOMPILE_ADDRESS_PREFIX;
+}
+
+pub struct DispatchFilterValidate<RuntimeCall, Filter: Contains<RuntimeCall>>(
+	PhantomData<(RuntimeCall, Filter)>,
+);
+
+impl<AccountId, RuntimeCall: GetDispatchInfo, Filter: Contains<RuntimeCall>>
+	DispatchValidateT<AccountId, RuntimeCall> for DispatchFilterValidate<RuntimeCall, Filter>
+{
+	fn validate_before_dispatch(
+		_origin: &AccountId,
+		call: &RuntimeCall,
+	) -> Option<PrecompileFailure> {
+		let info = call.get_dispatch_info();
+		let paid_normal_call = info.pays_fee == Pays::Yes && info.class == DispatchClass::Normal;
+		if !paid_normal_call {
+			return Some(PrecompileFailure::Error {
+				exit_status: ExitError::Other("invalid call".into()),
+			});
+		}
+		if Filter::contains(call) {
+			None
+		} else {
+			Some(PrecompileFailure::Error {
+				exit_status: ExitError::Other("call filtered out".into()),
+			})
+		}
+	}
 }
 
 /// Precompile checks for ethereum spec precompiles
