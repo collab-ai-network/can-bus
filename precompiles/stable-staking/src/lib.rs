@@ -249,7 +249,7 @@ where
 		// Twox64(8) * 2 + 32 + 16 + 16 + 4 * 2 = 88
 		handle.record_db_read::<Runtime>(48)?;
 
-		let user = user.try_into().map_err(|_| {
+		let user: Runtime::AccountId  = user.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("address type"))
 		})?;
 		let pool_id: PoolId<Runtime> = pool.try_into().map_err(|_| {
