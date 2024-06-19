@@ -36,10 +36,8 @@ where
 		let amount: BalanceOf<Runtime> = amount.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("balance type"))
 		})?;
-		let dest_id = dest_id.into();
 		let recipient: Vec<u8> = recipient.into();
 		let resource_id = resource_id.into();
-		let recipient: Vec<u8> = recipient.into();
 
 		let call = pallet_bridge_transfer::Call::<Runtime>::transfer_assets {
 			amount,
