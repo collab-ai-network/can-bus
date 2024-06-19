@@ -5860,6 +5860,8 @@ dependencies = [
  "libsecp256k1",
  "log",
  "num_enum 0.5.11",
+ "pallet-assets",
+ "pallet-balances",
  "pallet-evm",
  "pallet-stable-staking",
  "pallet-timestamp",

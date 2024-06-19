@@ -46,10 +46,10 @@ pub(crate) struct PrecompileStakingInfo {
 	last_add_time: U256,
 }
 
-pub struct PalletStableStakingPrecompile<Runtime>(PhantomData<Runtime>);
+pub struct StableStakingPrecompile<Runtime>(PhantomData<Runtime>);
 
 #[precompile_utils::precompile]
-impl<Runtime> PalletStableStakingPrecompile<Runtime>
+impl<Runtime> StableStakingPrecompile<Runtime>
 where
 	Runtime: pallet_stable_staking::Config + pallet_evm::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
@@ -63,7 +63,7 @@ where
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
 		let amount: BalanceOf<Runtime> = amount
 			.try_into()
 			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
@@ -89,7 +89,7 @@ where
 
 		let until_time: BlockNumberFor<Runtime> = until_time
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
+			.map_err(|_| RevertReason::value_is_too_large("block number type").into())?;
 		let call = pallet_stable_staking::Call::<Runtime>::claim_native { until_time };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
@@ -101,7 +101,7 @@ where
 
 		let until_time: BlockNumberFor<Runtime> = until_time
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
+			.map_err(|_| RevertReason::value_is_too_large("block number type").into())?;
 		let call =
 			pallet_stable_staking::Call::<Runtime>::claim_stable { pool_id: pool, until_time };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
@@ -114,7 +114,7 @@ where
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
-			.map_err(|_| RevertReason::value_is_too_large("balance type").into())?;
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
 		let call = pallet_stable_staking::Call::<Runtime>::withdraw { pool_id };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
@@ -126,6 +126,22 @@ where
 		handle: &mut impl PrecompileHandle,
 		pool: U256,
 	) -> EvmResult<PrecompilePoolSetting> {
+		// Storage item: StakingPoolSetting:
+		// Twox64(8) + 16+ 16 * 2 + 4 * 3 = 68
+		handle.record_db_read::<R>(68)?;
+
+		let pool_id: PoolId<Runtime> = pool
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
+		let pool_setting = StakingPoolSetting::<Runtime>::get(pool_id);
+
+		Ok(PrecompilePoolSetting {
+			start_time: pool_setting.start_time.into(),
+			epoch: pool_setting.start_time.into(),
+			epoch_range: pool_setting.epoch_range.into(),
+			setup_time: pool_setting.setup_time.into(),
+			pool_cap: pool_setting.pool_cap.into(),
+		})
 	}
 
 	#[precompile::public("stableStakingPoolReward(uint256)")]
@@ -134,6 +150,15 @@ where
 		handle: &mut impl PrecompileHandle,
 		pool: U256,
 	) -> EvmResult<U256> {
+		// Storage item: StableStakingPoolReward:
+		// Twox64(8) + 16 + 16 = 40
+		handle.record_db_read::<R>(40)?;
+
+		let pool_id: PoolId<Runtime> = pool
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
+		let reward = StableStakingPoolReward::<Runtime>::get(pool_id);
+		Ok(reward.into())
 	}
 
 	#[precompile::public("stableStakingPoolEpochReward(uint256,uint256)")]
@@ -143,6 +168,18 @@ where
 		pool: U256,
 		epoch: U256,
 	) -> EvmResult<U256> {
+		// Storage item: StableStakingPoolEpochReward:
+		// Twox64(8) * 2 + 16 + 16 + 16 * 2 = 80
+		handle.record_db_read::<R>(80)?;
+
+		let pool_id: PoolId<Runtime> = pool
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
+		let epoch: u128 = epoch
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("epoch index type").into())?;
+		let reward = StableStakingPoolEpochReward::<Runtime>::get(pool_id, epoch);
+		Ok(reward.into())
 	}
 
 	#[precompile::public("stableStakingPoolCheckpoint(uint256)")]
@@ -151,6 +188,20 @@ where
 		handle: &mut impl PrecompileHandle,
 		pool: U256,
 	) -> EvmResult<PrecompileStakingInfo> {
+		// Storage item: StableStakingPoolCheckpoint:
+		// Twox64(8) + 16 + 16 + 4 * 2 = 48
+		handle.record_db_read::<R>(48)?;
+
+		let pool_id: PoolId<Runtime> = pool
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
+		let staking_info = StableStakingPoolCheckpoint::<Runtime>::get(pool_id);
+
+		Ok(PrecompileStakingInfo {
+			effective_time: staking_info.effective_time.into(),
+			amount: staking_info.amount.into(),
+			last_add_time: staking_info.last_add_time.into(),
+		})
 	}
 
 	#[precompile::public("userStableStakingPoolCheckpoint(address,uint256)")]
@@ -160,6 +211,21 @@ where
 		user: Address,
 		pool: U256,
 	) -> EvmResult<PrecompileStakingInfo> {
+		// Storage item: UserStableStakingPoolCheckpoint:
+		// Twox64(8) * 2 + 32 + 16 + 16 + 4 * 2 = 88
+		handle.record_db_read::<R>(88)?;
+
+		let user = Runtime::AddressMapping::into_account_id(user.into());
+		let pool_id: PoolId<Runtime> = pool
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
+		let staking_info = UserStableStakingPoolCheckpoint::<Runtime>::get(user, pool_id);
+
+		Ok(PrecompileStakingInfo {
+			effective_time: staking_info.effective_time.into(),
+			amount: staking_info.amount.into(),
+			last_add_time: staking_info.last_add_time.into(),
+		})
 	}
 
 	#[precompile::public("userStableStakingPoolCheckpoint(bytes32,uint256)")]
@@ -169,11 +235,40 @@ where
 		user: H256,
 		pool: U256,
 	) -> EvmResult<PrecompileStakingInfo> {
+		// Storage item: UserStableStakingPoolCheckpoint:
+		// Twox64(8) * 2 + 32 + 16 + 16 + 4 * 2 = 88
+		handle.record_db_read::<R>(48)?;
+
+		let user = user
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("address type").into())?;
+		let pool_id: PoolId<Runtime> = pool
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
+		let staking_info = UserStableStakingPoolCheckpoint::<Runtime>::get(user, pool_id);
+
+		Ok(PrecompileStakingInfo {
+			effective_time: staking_info.effective_time.into(),
+			amount: staking_info.amount.into(),
+			last_add_time: staking_info.last_add_time.into(),
+		})
 	}
 
 	#[precompile::public("nativeCheckpoint()")]
 	#[precompile::view]
-	fn native_checkpoint(handle: &mut impl PrecompileHandle) -> EvmResult<PrecompileStakingInfo> {}
+	fn native_checkpoint(handle: &mut impl PrecompileHandle) -> EvmResult<PrecompileStakingInfo> {
+		// Storage item: UserStableStakingPoolCheckpoint:
+		// 16 + 4 * 2 = 24
+		handle.record_db_read::<R>(24)?;
+
+		let staking_info = NativeCheckpoint::<Runtime>::get();
+
+		Ok(PrecompileStakingInfo {
+			effective_time: staking_info.effective_time.into(),
+			amount: staking_info.amount.into(),
+			last_add_time: staking_info.last_add_time.into(),
+		})
+	}
 
 	#[precompile::public("userNativeCheckpoint(address)")]
 	#[precompile::view]
@@ -181,6 +276,18 @@ where
 		handle: &mut impl PrecompileHandle,
 		user: Address,
 	) -> EvmResult<PrecompileStakingInfo> {
+		// Storage item: UserStableStakingPoolCheckpoint:
+		// Twox64(8) + 32 + 16 + 4 * 2 = 64
+		handle.record_db_read::<R>(64)?;
+
+		let user = Runtime::AddressMapping::into_account_id(user.into());
+		let staking_info = UserNativeCheckpoint::<Runtime>::get(user);
+
+		Ok(PrecompileStakingInfo {
+			effective_time: staking_info.effective_time.into(),
+			amount: staking_info.amount.into(),
+			last_add_time: staking_info.last_add_time.into(),
+		})
 	}
 
 	#[precompile::public("userNativeCheckpoint(bytes32)")]
@@ -189,9 +296,34 @@ where
 		handle: &mut impl PrecompileHandle,
 		user: H256,
 	) -> EvmResult<PrecompileStakingInfo> {
+		// Storage item: UserStableStakingPoolCheckpoint:
+		// Twox64(8) + 32 + 16 + 4 * 2 = 64
+		handle.record_db_read::<R>(64)?;
+
+		let user = user
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("address type").into())?;
+		let staking_info = UserNativeCheckpoint::<Runtime>::get(user);
+
+		Ok(PrecompileStakingInfo {
+			effective_time: staking_info.effective_time.into(),
+			amount: staking_info.amount.into(),
+			last_add_time: staking_info.last_add_time.into(),
+		})
 	}
 
 	#[precompile::public("pendingAmount(uint256)")]
 	#[precompile::view]
-	fn pending_amount(handle: &mut impl PrecompileHandle, pool: U256) -> EvmResult<U256> {}
+	fn pending_amount(handle: &mut impl PrecompileHandle, pool: U256) -> EvmResult<U256> {
+		// Storage item: PendingAmount:
+		// Twox64(8) + 16 + 16 = 40
+		handle.record_db_read::<R>(40)?;
+
+		let pool_id: PoolId<Runtime> = pool
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("pool index type").into())?;
+		let amount = PendingAmount::<Runtime>::get(pool_id);
+
+		Ok(amount.into())
+	}
 }
