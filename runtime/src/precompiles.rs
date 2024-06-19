@@ -1,5 +1,11 @@
 use crate::RuntimeCall;
-use frame_support::{parameter_types, traits::Contains};
+use core::marker::PhantomData;
+use fp_evm::{ExitError, PrecompileFailure};
+use frame_support::{
+	dispatch::{DispatchClass, GetDispatchInfo, Pays},
+	parameter_types,
+	traits::Contains,
+};
 use pallet_evm_precompile_assets_erc20::Erc20AssetsPrecompileSet;
 use pallet_evm_precompile_blake2::Blake2F;
 use pallet_evm_precompile_bn128::{Bn128Add, Bn128Mul, Bn128Pairing};
@@ -11,7 +17,6 @@ use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripe
 use precompile_utils::precompile_set::*;
 use sp_core::ConstU32;
 use sp_std::fmt::Debug;
-
 /// The asset precompile address prefix. Addresses that match against this prefix will be routed
 /// to Erc20AssetsPrecompileSet
 pub const ASSET_PRECOMPILE_ADDRESS_PREFIX: &[u8] = &[255u8; 4];
