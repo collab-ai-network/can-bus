@@ -53,7 +53,7 @@ impl<Runtime> StableStakingPrecompile<Runtime>
 where
 	Runtime: pallet_stable_staking::Config + pallet_evm::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
-	Runtime::RuntimeCall: From<pallet_template::Call<Runtime>>,
+	Runtime::RuntimeCall: From<pallet_stable_staking::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	Runtime::AccountId: Into<H160>,
 {
@@ -128,7 +128,7 @@ where
 	) -> EvmResult<PrecompilePoolSetting> {
 		// Storage item: StakingPoolSetting:
 		// Twox64(8) + 16+ 16 * 2 + 4 * 3 = 68
-		handle.record_db_read::<R>(68)?;
+		handle.record_db_read::<Runtime>(68)?;
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
@@ -152,7 +152,7 @@ where
 	) -> EvmResult<U256> {
 		// Storage item: StableStakingPoolReward:
 		// Twox64(8) + 16 + 16 = 40
-		handle.record_db_read::<R>(40)?;
+		handle.record_db_read::<Runtime>(40)?;
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
@@ -170,7 +170,7 @@ where
 	) -> EvmResult<U256> {
 		// Storage item: StableStakingPoolEpochReward:
 		// Twox64(8) * 2 + 16 + 16 + 16 * 2 = 80
-		handle.record_db_read::<R>(80)?;
+		handle.record_db_read::<Runtime>(80)?;
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
@@ -190,7 +190,7 @@ where
 	) -> EvmResult<PrecompileStakingInfo> {
 		// Storage item: StableStakingPoolCheckpoint:
 		// Twox64(8) + 16 + 16 + 4 * 2 = 48
-		handle.record_db_read::<R>(48)?;
+		handle.record_db_read::<Runtime>(48)?;
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
@@ -213,7 +213,7 @@ where
 	) -> EvmResult<PrecompileStakingInfo> {
 		// Storage item: UserStableStakingPoolCheckpoint:
 		// Twox64(8) * 2 + 32 + 16 + 16 + 4 * 2 = 88
-		handle.record_db_read::<R>(88)?;
+		handle.record_db_read::<Runtime>(88)?;
 
 		let user = Runtime::AddressMapping::into_account_id(user.into());
 		let pool_id: PoolId<Runtime> = pool
@@ -237,7 +237,7 @@ where
 	) -> EvmResult<PrecompileStakingInfo> {
 		// Storage item: UserStableStakingPoolCheckpoint:
 		// Twox64(8) * 2 + 32 + 16 + 16 + 4 * 2 = 88
-		handle.record_db_read::<R>(48)?;
+		handle.record_db_read::<Runtime>(48)?;
 
 		let user = user
 			.try_into()
@@ -259,7 +259,7 @@ where
 	fn native_checkpoint(handle: &mut impl PrecompileHandle) -> EvmResult<PrecompileStakingInfo> {
 		// Storage item: UserStableStakingPoolCheckpoint:
 		// 16 + 4 * 2 = 24
-		handle.record_db_read::<R>(24)?;
+		handle.record_db_read::<Runtime>(24)?;
 
 		let staking_info = NativeCheckpoint::<Runtime>::get();
 
@@ -278,7 +278,7 @@ where
 	) -> EvmResult<PrecompileStakingInfo> {
 		// Storage item: UserStableStakingPoolCheckpoint:
 		// Twox64(8) + 32 + 16 + 4 * 2 = 64
-		handle.record_db_read::<R>(64)?;
+		handle.record_db_read::<Runtime>(64)?;
 
 		let user = Runtime::AddressMapping::into_account_id(user.into());
 		let staking_info = UserNativeCheckpoint::<Runtime>::get(user);
@@ -298,7 +298,7 @@ where
 	) -> EvmResult<PrecompileStakingInfo> {
 		// Storage item: UserStableStakingPoolCheckpoint:
 		// Twox64(8) + 32 + 16 + 4 * 2 = 64
-		handle.record_db_read::<R>(64)?;
+		handle.record_db_read::<Runtime>(64)?;
 
 		let user = user
 			.try_into()
@@ -317,7 +317,7 @@ where
 	fn pending_amount(handle: &mut impl PrecompileHandle, pool: U256) -> EvmResult<U256> {
 		// Storage item: PendingAmount:
 		// Twox64(8) + 16 + 16 = 40
-		handle.record_db_read::<R>(40)?;
+		handle.record_db_read::<Runtime>(40)?;
 
 		let pool_id: PoolId<Runtime> = pool
 			.try_into()
