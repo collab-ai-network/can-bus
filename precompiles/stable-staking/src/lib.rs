@@ -58,7 +58,7 @@ where
 	Runtime::RuntimeCall: From<pallet_stable_staking::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	Runtime::AccountId: Into<H160>,
-	BalanceOf<Runtime>: TryFrom<U256>,
+	BalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
 	Runtime::PoolId: TryFrom<U256>,
 	BlockNumberFor<Runtime>: TryFrom<U256>,
 {
@@ -140,7 +140,8 @@ where
 		let pool_id: PoolId<Runtime> = pool.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("pool index type"))
 		})?;
-		let pool_setting = StakingPoolSetting::<Runtime>::get(pool_id).ok_or(RevertReason::Custom("not existing"))?;
+		let pool_setting = StakingPoolSetting::<Runtime>::get(pool_id)
+			.ok_or(RevertReason::Custom("not existing"))?;
 
 		Ok(PrecompilePoolSetting {
 			start_time: pool_setting.start_time.into(),
@@ -202,7 +203,8 @@ where
 		let pool_id: PoolId<Runtime> = pool.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("pool index type"))
 		})?;
-		let staking_info = StableStakingPoolCheckpoint::<Runtime>::get(pool_id).ok_or(RevertReason::Custom("not existing"))?;
+		let staking_info = StableStakingPoolCheckpoint::<Runtime>::get(pool_id)
+			.ok_or(RevertReason::Custom("not existing"))?;
 
 		Ok(PrecompileStakingInfo {
 			effective_time: staking_info.effective_time.into(),
@@ -226,7 +228,8 @@ where
 		let pool_id: PoolId<Runtime> = pool.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("pool index type"))
 		})?;
-		let staking_info = UserStableStakingPoolCheckpoint::<Runtime>::get(user, pool_id).ok_or(RevertReason::Custom("not existing"))?;
+		let staking_info = UserStableStakingPoolCheckpoint::<Runtime>::get(user, pool_id)
+			.ok_or(RevertReason::Custom("not existing"))?;
 
 		Ok(PrecompileStakingInfo {
 			effective_time: staking_info.effective_time.into(),
@@ -252,7 +255,8 @@ where
 		let pool_id: PoolId<Runtime> = pool.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("pool index type"))
 		})?;
-		let staking_info = UserStableStakingPoolCheckpoint::<Runtime>::get(user, pool_id).ok_or(RevertReason::Custom("not existing"))?;
+		let staking_info = UserStableStakingPoolCheckpoint::<Runtime>::get(user, pool_id)
+			.ok_or(RevertReason::Custom("not existing"))?;
 
 		Ok(PrecompileStakingInfo {
 			effective_time: staking_info.effective_time.into(),
@@ -268,7 +272,8 @@ where
 		// 16 + 4 * 2 = 24
 		handle.record_db_read::<Runtime>(24)?;
 
-		let staking_info = NativeCheckpoint::<Runtime>::get().ok_or(RevertReason::Custom("not existing"))?;
+		let staking_info =
+			NativeCheckpoint::<Runtime>::get().ok_or(RevertReason::Custom("not existing"))?;
 
 		Ok(PrecompileStakingInfo {
 			effective_time: staking_info.effective_time.into(),
@@ -288,7 +293,8 @@ where
 		handle.record_db_read::<Runtime>(64)?;
 
 		let user = Runtime::AddressMapping::into_account_id(user.into());
-		let staking_info = UserNativeCheckpoint::<Runtime>::get(user).ok_or(RevertReason::Custom("not existing"))?;
+		let staking_info = UserNativeCheckpoint::<Runtime>::get(user)
+			.ok_or(RevertReason::Custom("not existing"))?;
 
 		Ok(PrecompileStakingInfo {
 			effective_time: staking_info.effective_time.into(),
@@ -310,7 +316,8 @@ where
 		let user = user.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("address type"))
 		})?;
-		let staking_info = UserNativeCheckpoint::<Runtime>::get(user).ok_or(RevertReason::Custom("not existing"))?;
+		let staking_info = UserNativeCheckpoint::<Runtime>::get(user)
+			.ok_or(RevertReason::Custom("not existing"))?;
 
 		Ok(PrecompileStakingInfo {
 			effective_time: staking_info.effective_time.into(),
