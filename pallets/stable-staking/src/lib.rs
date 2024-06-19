@@ -207,7 +207,7 @@ pub mod pallet {
 		/// Identifier for the class of pool.
 		type PoolId: Member
 			+ Parameter
-			+ AtLeast32BitUnsigned
+			+ From<sp_core::U256>
 			+ Clone
 			+ MaybeSerializeDeserialize
 			+ MaxEncodedLen

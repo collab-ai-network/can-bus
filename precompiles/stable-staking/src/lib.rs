@@ -17,6 +17,11 @@ pub type NativeBalanceOf<Runtime, Instance = ()> =
 pub type BalanceOf<Runtime, Instance = ()> = <Runtime as pallet_assets::Config<Instance>>::Balance;
 pub type PoolId<Runtime> = <Runtime as pallet_stable_staking::Config>::PoolId;
 use frame_system::pallet_prelude::BlockNumberFor;
+use pallet_stable_staking::{
+	NativeCheckpoint, PendingAmount, StableStakingPoolCheckpoint, StableStakingPoolEpochReward,
+	StableStakingPoolReward, StakingPoolSetting, UserNativeCheckpoint,
+	UserStableStakingPoolCheckpoint,
+};
 
 /// @notice Describes pool setting.
 /// @param startTime: The start time of pool.
