@@ -32,12 +32,12 @@ mod tests;
 pub struct StakingInfo<BlockNumber, Balance> {
 	// For a single position or
 	// Synthetic overall average effective_time weighted by staked amount
-	effective_time: BlockNumber,
+	pub effective_time: BlockNumber,
 	// Staked amount
-	amount: Balance,
+	pub amount: Balance,
 	// This is recorded for not allowing weight calculation when time < some of history effective
 	// time
-	last_add_time: BlockNumber,
+	pub last_add_time: BlockNumber,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
