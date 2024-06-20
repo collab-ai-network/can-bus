@@ -32,12 +32,12 @@ mod tests;
 pub struct StakingInfo<BlockNumber, Balance> {
 	// For a single position or
 	// Synthetic overall average effective_time weighted by staked amount
-	effective_time: BlockNumber,
+	pub effective_time: BlockNumber,
 	// Staked amount
-	amount: Balance,
+	pub amount: Balance,
 	// This is recorded for not allowing weight calculation when time < some of history effective
 	// time
-	last_add_time: BlockNumber,
+	pub last_add_time: BlockNumber,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
@@ -45,14 +45,6 @@ pub struct StakingInfoWithOwner<AccountId, PoolId, StakingInfo> {
 	who: AccountId,
 	pool_id: PoolId,
 	staking_info: StakingInfo,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
-pub struct StableRewardInfo<Balance> {
-	// Epoch index
-	epoch: u128,
-	// Staked amount
-	reward_amount: Balance,
 }
 
 impl<BlockNumber, Balance> StakingInfo<BlockNumber, Balance>
@@ -183,9 +175,9 @@ pub mod pallet {
 
 	use super::*;
 
-	type BalanceOf<T> =
+	pub type BalanceOf<T> =
 		<<T as Config>::Fungibles as FsInspect<<T as frame_system::Config>::AccountId>>::Balance;
-	type NativeBalanceOf<T> =
+	pub type NativeBalanceOf<T> =
 		<<T as Config>::Fungible as FInspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 	/// The current storage version.
@@ -266,15 +258,8 @@ pub mod pallet {
 	// weight That means if APY is low may leads to user not claiming their reward on purpose
 	#[pallet::storage]
 	#[pallet::getter(fn stable_staking_pool_epoch_reward)]
-	pub type StableStakingPoolEpochReward<T: Config> = StorageDoubleMap<
-		_,
-		Twox64Concat,
-		T::PoolId,
-		Twox64Concat,
-		u128,
-		StableRewardInfo<BalanceOf<T>>,
-		OptionQuery,
-	>;
+	pub type StableStakingPoolEpochReward<T: Config> =
+		StorageDoubleMap<_, Twox64Concat, T::PoolId, Twox64Concat, u128, BalanceOf<T>, OptionQuery>;
 
 	// Checkpoint of single stable staking pool
 	// For stable token reward distribution
@@ -535,7 +520,7 @@ pub mod pallet {
 				|maybe_reward| -> DispatchResult {
 					ensure!(maybe_reward.is_none(), Error::<T>::RewardAlreadyExisted);
 
-					*maybe_reward = Some(StableRewardInfo { epoch, reward_amount: actual_reward });
+					*maybe_reward = Some(actual_reward);
 					Self::deposit_event(Event::<T>::RewardUpdated {
 						pool_id: pool_id.clone(),
 						epoch,

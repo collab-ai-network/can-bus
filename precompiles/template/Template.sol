@@ -3,7 +3,7 @@ pragma solidity >=0.8.3;
 
 interface ITemplate {
     /// @custom:selector 0x82692679
-    function doSomething() external;
+    function doSomething(uint32 something) external;
 
     /// @custom:selector 0x75819ce6
     function causeError() external;

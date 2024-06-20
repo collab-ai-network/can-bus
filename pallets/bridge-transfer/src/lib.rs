@@ -42,9 +42,10 @@ pub mod pallet {
 
 	pub use pallet_bridge as bridge;
 
-	type ResourceId = bridge::ResourceId;
+	pub type ResourceId = bridge::ResourceId;
+	pub type BridgeChainId = bridge::BridgeChainId;
 
-	type BalanceOf<T> = <T as bridge::Config>::Balance;
+	pub type BalanceOf<T> = <T as bridge::Config>::Balance;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
@@ -80,7 +81,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			amount: BalanceOf<T>,
 			recipient: Vec<u8>,
-			dest_id: bridge::BridgeChainId,
+			dest_id: BridgeChainId,
 			resource_id: ResourceId,
 		) -> DispatchResult {
 			let source = ensure_signed(origin)?;
