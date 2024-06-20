@@ -52,8 +52,7 @@ pub trait AddressToAssetId<AssetId> {
 
 /// The following distribution has been decided for the precompiles
 /// 0-1023: Ethereum Mainnet Precompiles
-/// 1024-2047 Precompiles that are not in Ethereum Mainnet but are neither Astar specific
-/// 2048-4095 Astar specific precompiles
+/// 1024-2047 Precompiles that are not in Ethereum Mainnet but are neither CAN specific
 /// Asset precompiles can only fall between
 ///     0xFFFFFFFF00000000000000000000000000000000 - 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 /// The precompile for AssetId X, where X is a u128 (i.e.16 bytes), if 0XFFFFFFFF + Bytes(AssetId)
