@@ -68,7 +68,7 @@ affix = { version = "0.1.2" }
 derive_more = { version = "0.99" }
 environmental = { version = "1.1.2", default-features = false }
 impl-trait-for-tuples = { version = "0.2.1" }
-num_enum = { version = "0.5.3", default-features = false }
+num_enum = { version = "0.7.2", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 similar-asserts = { version = "1.1.0" }
 libsecp256k1 = { version = "0.7", default-features = false }
