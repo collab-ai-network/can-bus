@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  chainbridge-monitor:
+    build: .
+    networks:
+      - chainbridge-test-network
+    entrypoint: >
+      ./usr/local/bin/chainbridge-monitor
+      --bridge-contract-address 0x544AC9E551254e8018dc9f6a586B7022AeE1aA48
+      --handler-contract-address 0xe0585918a689Eaaf528814a89c3083012E28414a
+      --litentry-endpoint ws://host.docker.internal:20044
+      --eth-endpoint <Enter Sepholia WS endpoint> 
+      --influx-db-endpoint http://influxdb:8086
+      --influx-db-auth-token UawFIIao6HyzdlBaLw1H_KA6vMMG9MejhUGl6OLlVLsbtRHtYxiaQms9594GtVw77uOWXcEjw9QUWlrVdd4u4w==
+      --influx-db-bucket felix
+  
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    networks: 
+      - chainbridge-test-network
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ORG=myorg
+      - DOCKER_INFLUXDB_INIT_BUCKET=felix
+      - DOCKER_INFLUXDB_INIT_RETENTION=1w
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=UawFIIao6HyzdlBaLw1H_KA6vMMG9MejhUGl6OLlVLsbtRHtYxiaQms9594GtVw77uOWXcEjw9QUWlrVdd4u4w==
+
+networks:
+  chainbridge-test-network:
+    driver: bridge
