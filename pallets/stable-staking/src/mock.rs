@@ -156,7 +156,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 		// Regist AIUSD
 		// asset_id = 1, admin = USER_A
-		assert_ok!(Assets::create(RuntimeOrigin::signed(USER_A), 1u32, USER_A, 1));
+		// normal create is wrong
+		// need to set asset is_frozen to True, otherwise no existing account (i.e. no native token)
+		// is not allowed to proccessing assets token
+		assert_ok!(Assets::force_create(RuntimeOrigin::signed(USER_A), 1u32, USER_A, true, 1));
 		assert_ok!(Assets::mint(RuntimeOrigin::signed(USER_A), 1u32, USER_A, ENDOWED_BALANCE));
 		assert_ok!(Assets::mint(RuntimeOrigin::signed(USER_A), 1u32, USER_B, ENDOWED_BALANCE));
 		assert_ok!(Assets::mint(RuntimeOrigin::signed(USER_A), 1u32, USER_C, ENDOWED_BALANCE));
