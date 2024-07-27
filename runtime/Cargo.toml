@@ -128,6 +128,7 @@ std = [
 	"pallet-ethereum/std",
 	"pallet-evm/std",
 	"pallet-evm-chain-id/std",
+	"pallet-evm-precompile-assets-erc20/std",
     "pallet-evm-precompile-blake2/std",
     "pallet-evm-precompile-simple/std",
     "pallet-evm-precompile-bn128/std",
