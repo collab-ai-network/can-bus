@@ -48,7 +48,7 @@ jobs:
 
       - name: Fail early
         if: failure()
-        uses: andymckay/cancel-action@0.4
+        uses: andymckay/cancel-action@0.5
 
   # sequentialise the workflow runs on `dev` branch
   # the if condition is applied in step level to make this job always `successful`
@@ -86,7 +86,7 @@ jobs:
 
       - name: Fail early
         if: failure()
-        uses: andymckay/cancel-action@0.4
+        uses: andymckay/cancel-action@0.5
   
   build-check:
     runs-on: ubuntu-latest
